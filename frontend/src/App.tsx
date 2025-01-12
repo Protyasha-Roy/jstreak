@@ -404,7 +404,7 @@ export default function App() {
             </nav>
           </div>
           <div className={`lg:flex-1 lg:overflow-auto hide-scrollbar relative ${isNavSticky ? 'mt-[4.5rem]' : ''}`}>
-            <div className="min-h-full w-full px-8 py-6">
+            <div className="min-h-full w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
               <div className="max-w-[900px] mx-auto">
                 <AnimatePresence mode="wait">
                   {rightContent && <RightContent key={rightContent} type={rightContent} />}
