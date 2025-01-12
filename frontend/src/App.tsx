@@ -8,10 +8,15 @@ import { ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { Label } from './components/ui/label'
 import { RightContent } from './components/right-content'
 import { cn } from './lib/utils'
+import { checkUsername, checkEmail, register, verifyOTP, login } from './services/api'
+
+interface ApiError {
+  message: string;
+}
 
 type StepType = 'username' | 'email' | 'password' | 'otp'
 type FooterLinkType = 'about' | 'pricing' | 'terms' | 'privacy' | 'contact'
-type AuthMode = 'signup' | 'login'
+type AuthMode = 'login' | 'signup'
 
 export default function App() {
   const [step, setStep] = useState<StepType>('username')
@@ -19,6 +24,9 @@ export default function App() {
   const [authMode, setAuthMode] = useState<AuthMode>('signup')
   const [isNavSticky, setIsNavSticky] = useState(false)
   const [navOriginalTop, setNavOriginalTop] = useState<number | null>(null)
+  const [error, setError] = useState<string>('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [sessionToken, setSessionToken] = useState<string>('')
 
   useEffect(() => {
     const navElement = document.getElementById('right-nav');
@@ -54,22 +62,59 @@ export default function App() {
   })
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (authMode === 'signup') {
-      if (step === 'username') {
-        setStep('email')
-      } else if (step === 'email') {
-        setStep('password')
-      } else if (step === 'password') {
-        setStep('otp')
+    setError('')
+    setIsLoading(true)
+
+    try {
+      if (authMode === 'signup') {
+        if (step === 'username') {
+          const { exists } = await checkUsername(formData.username)
+          if (exists) {
+            setError('Username is already taken')
+            return
+          }
+          setStep('email')
+        } else if (step === 'email') {
+          const { exists } = await checkEmail(formData.email)
+          if (exists) {
+            setError('Email is already registered')
+            return
+          }
+          setStep('password')
+        } else if (step === 'password') {
+          const response = await register({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password
+          })
+          setSessionToken(response.token)
+          setStep('otp')
+        } else if (step === 'otp') {
+          const { success } = await verifyOTP(formData.otp, sessionToken)
+          if (success) {
+            // Store token and redirect
+            localStorage.setItem('token', sessionToken)
+            window.location.href = `/${formData.username}`
+          } else {
+            setError('Invalid verification code')
+          }
+        }
       } else {
-        // Handle form submission
-        console.log('Form submitted:', formData)
+        // Handle login
+        const response = await login({
+          username: formData.username,
+          password: formData.password
+        })
+        localStorage.setItem('token', response.token)
+        window.location.href = `/${response.user.username}`
       }
-    } else {
-      // Handle login
-      console.log('Login:', formData)
+    } catch (err) {
+      const error = err as ApiError;
+      setError(error.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -151,6 +196,16 @@ export default function App() {
                 >
                   {getStepTitle(step)}
                 </motion.h2>
+
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-500 text-sm bg-red-50 dark:bg-red-950/50 p-2 rounded-md border border-red-200 dark:border-red-800"
+                  >
+                    {error}
+                  </motion.div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-2">
                   <AnimatePresence mode="wait">
@@ -324,9 +379,11 @@ export default function App() {
                       type="submit" 
                       className={cn(
                         "hover:bg-primary/90 focus-visible:ring-0 transition-colors",
-                        step !== 'username' && authMode !== 'login' ? "w-1/2" : "w-full"
+                        step !== 'username' && authMode !== 'login' ? "w-1/2" : "w-full",
+                        isLoading && "opacity-50 cursor-not-allowed"
                       )}
                       disabled={
+                        isLoading ||
                         (step === 'username' && (!formData.username || formData.username.length < 3)) ||
                         (step === 'email' && (!formData.email || !formData.email.includes('@'))) ||
                         (step === 'password' && (!formData.password || formData.password.length < 6)) ||
@@ -334,16 +391,28 @@ export default function App() {
                         (authMode === 'login' && (!formData.username || !formData.password))
                       }
                     >
-                      {authMode === 'login'
-                        ? 'Sign in'
-                        : step === 'otp'
-                        ? 'Complete Sign up'
-                        : (
-                          <>
-                            Continue
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </>
-                        )}
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Loading...
+                        </div>
+                      ) : (
+                        <>
+                          {authMode === 'login'
+                            ? 'Sign in'
+                            : step === 'otp'
+                            ? 'Complete Sign up'
+                            : (
+                              <>
+                                Continue
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                              </>
+                            )}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </form>
