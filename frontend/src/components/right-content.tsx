@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Check, Mail, MessageSquare, PenLine, Calendar, Palette, FileText, Lock, BarChart } from 'lucide-react'
+import { PenLine, Calendar, Palette, FileText, Lock, BarChart } from 'lucide-react'
+import { Input } from './ui/input'
+import { Textarea } from './ui/textarea'
+import { useState } from 'react'
 
 interface RightContentProps {
   type: 'about' | 'pricing' | 'terms' | 'privacy' | 'contact'
@@ -196,45 +199,198 @@ const pageContent = {
   terms: {
     title: 'Terms of Service',
     content: (
-      <div className="space-y-6 text-muted-foreground">
-        <p>
-          By using JStreak, you agree to these terms of service. We take our responsibility seriously
-          and aim to provide a reliable service while protecting your privacy and data.
-        </p>
-      </div>
-    )
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="prose prose-sm dark:prose-invert space-y-6"
+      >
+        <div>
+          <h3 className="text-lg font-semibold mb-2">1. Acceptance of Terms</h3>
+          <p>By accessing and using JStreak, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">2. User Accounts</h3>
+          <p>You are responsible for maintaining the security of your account and password. JStreak cannot and will not be liable for any loss or damage from your failure to comply with this security obligation.</p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">3. Content Ownership</h3>
+          <p>You retain all rights to the content you post on JStreak. By posting content, you grant JStreak a license to use, modify, and display that content solely for the purpose of providing the service.</p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">4. Acceptable Use</h3>
+          <p>You agree not to use JStreak for any unlawful purposes or to conduct any unlawful activity, including, but not limited to, fraud, embezzlement, money laundering, or insider trading.</p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">5. Service Modifications</h3>
+          <p>JStreak reserves the right to modify or discontinue the service at any time, with or without notice to you.</p>
+        </div>
+      </motion.div>
+    ),
   },
   privacy: {
     title: 'Privacy Policy',
     content: (
-      <div className="space-y-6 text-muted-foreground">
-        <p>
-          Your privacy is important to us. We never share your journal entries with anyone
-          and use industry-standard encryption to protect your data.
-        </p>
-      </div>
-    )
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="prose prose-sm dark:prose-invert space-y-6"
+      >
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Information We Collect</h3>
+          <p>We collect information you provide directly to us, including:</p>
+          <ul className="list-disc pl-6 mt-2 space-y-1">
+            <li>Account information (username, email)</li>
+            <li>Journal entries and content</li>
+            <li>Usage data and analytics</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">How We Use Your Information</h3>
+          <p>We use the information we collect to:</p>
+          <ul className="list-disc pl-6 mt-2 space-y-1">
+            <li>Provide and maintain the JStreak service</li>
+            <li>Track and display your journaling activity</li>
+            <li>Improve and personalize your experience</li>
+            <li>Communicate with you about updates and features</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Data Security</h3>
+          <p>We implement appropriate security measures to protect your personal information. However, no method of transmission over the Internet is 100% secure.</p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Your Rights</h3>
+          <p>You have the right to:</p>
+          <ul className="list-disc pl-6 mt-2 space-y-1">
+            <li>Access your personal information</li>
+            <li>Correct inaccurate data</li>
+            <li>Request deletion of your data</li>
+            <li>Export your journal entries</li>
+          </ul>
+        </div>
+      </motion.div>
+    ),
   },
   contact: {
     title: 'Contact Us',
     content: (
-      <div className="space-y-6">
-        <p className="text-muted-foreground">
-          Have questions? We're here to help. Reach out to us anytime.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button className="flex items-center gap-2" variant="outline">
-            <Mail className="h-4 w-4" />
-            Email Support
-          </Button>
-          <Button className="flex items-center gap-2" variant="outline">
-            <MessageSquare className="h-4 w-4" />
-            Live Chat
-          </Button>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="space-y-6 max-w-xl mx-auto"
+      >
+        <div className="text-center mb-6">
+          <p className="text-muted-foreground">
+            Have questions or feedback? We'd love to hear from you.
+            You can also email us directly at{' '}
+            <a href="mailto:support@jstreak.com" className="text-primary hover:underline">
+              support@jstreak.com
+            </a>
+          </p>
         </div>
+
+        <ContactForm />
+      </motion.div>
+    ),
+  },
+}
+
+function ContactForm() {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate form submission
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setIsSubmitting(false);
+    setSubmitted(true);
+    setFormData({ username: '', email: '', message: '' });
+    
+    // Reset success message after 5 seconds
+    setTimeout(() => setSubmitted(false), 5000);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label htmlFor="username" className="text-sm font-medium">
+          Username
+        </label>
+        <Input
+          id="username"
+          value={formData.username}
+          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+          placeholder="Your username"
+          required
+          minLength={3}
+        />
       </div>
-    )
-  }
+
+      <div className="space-y-2">
+        <label htmlFor="email" className="text-sm font-medium">
+          Email
+        </label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="you@example.com"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="message" className="text-sm font-medium">
+          Message
+        </label>
+        <Textarea
+          id="message"
+          value={formData.message}
+          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          placeholder="Your message or feedback"
+          required
+          className="min-h-[120px]"
+        />
+      </div>
+
+      <div className="pt-2">
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Sending...' : 'Send Message'}
+        </Button>
+      </div>
+
+      {submitted && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center text-sm text-green-500 dark:text-green-400"
+        >
+          Thank you! Your message has been sent successfully.
+        </motion.div>
+      )}
+    </form>
+  );
 }
 
 export function RightContent({ type }: RightContentProps) {
