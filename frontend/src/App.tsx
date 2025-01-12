@@ -307,13 +307,13 @@ export default function App() {
                     {getStepDescription(step)}
                   </p>
 
-                  <div className="pt-4 flex flex-col-reverse sm:flex-row gap-2">
+                  <div className="pt-4 flex gap-2">
                     {step !== 'username' && authMode !== 'login' && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="sm:w-1/3 hover:bg-accent hover:text-accent-foreground focus-visible:ring-0 transition-colors"
+                        className="w-1/2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-0 transition-colors"
                         onClick={handleBack}
                       >
                         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -323,8 +323,8 @@ export default function App() {
                     <Button 
                       type="submit" 
                       className={cn(
-                        "sm:w-full hover:bg-primary/90 focus-visible:ring-0 transition-colors",
-                        step !== 'username' && authMode !== 'login' ? "sm:w-2/3" : "sm:w-full"
+                        "hover:bg-primary/90 focus-visible:ring-0 transition-colors",
+                        step !== 'username' && authMode !== 'login' ? "w-1/2" : "w-full"
                       )}
                       disabled={
                         (step === 'username' && (!formData.username || formData.username.length < 3)) ||
