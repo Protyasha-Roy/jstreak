@@ -1,0 +1,199 @@
+# AI Code Editor Prompt for Self-Sufficient Development
+
+## Project Scope and Goal
+You are tasked with completing the following project based on these requirements:
+## Description
+A text-only daily journaling SaaS where users can claim a personal journaling page (`jstreak.me/username`). Users can track their journaling activity via a GitHub-like heatmap integrated into a calendar view, showcasing their activity over time. Journals support markdown-style syntax for lists, tables, and links, but no images or videos or audios. Users can share their journaling page publicly, customize it with themes, and control privacy for individual journal entries. 
+
+Key features include streak tracking, word count analysis, multiple customizable themes, and a live preview of how the page looks to visitors. Free users are limited to basic themes and 7 journal entries per month. Paid users ($5/month) unlock advanced themes and unlimited journaling.
+
+The application will prioritize sleek, dark-mode design with playful animations and a user-friendly interface. It will be production-ready with SEO optimization, Google Analytics, Paddle payment integration, and legally required pages (Terms of Service, Privacy Policy, etc.).
+
+---
+
+## Tech Stack
+- **Frontend**: vite
+- **Styling and Components**: [ShadCN](https://shadcn.dev/)
+- **Animations**: Use best animation library for vite project.
+- **Payment Gateway**: [Paddle](https://developer.paddle.com/)
+- **Analytics**: Google Analytics
+- **Fonts**: Choose a standout font like [Lexend](https://fonts.google.com/specimen/Lexend).
+
+---
+
+## Functional Requirements
+1. **User Features**:
+   - Register using unique username. And then password.
+   - Write daily journal entries with markdown support for everything except audios, videos, images.
+   - View journaling activity on a customizable(list view, table view, items per row, font-sizes and stuff, colors etc.) calendar heatmap.
+   - Track statistics (highest streak, current streak, total words written, most consistent month of the year)
+   - Mark journal entries private or public.
+   - Preview the public version of their journaling page. Also total page views.
+   - Customize their page with themes (basic themes for free users; advanced themes for paid users).
+   - Journal only for the current day and the days before.
+
+2. **Subscription System**:
+   - Free users:
+     - Access to basic light/dark themes.
+     - Limit of 7 journal entries per month.
+     - One-month free trial on signup.
+   - Paid users ($5/month):
+     - Unlimited journaling.
+     - Access to advanced themes.
+     - No watermarks on shared pages.
+
+3. **SEO and Analytics**:
+   - Google Analytics integration.
+   - SEO-friendly structure with meta tags, sitemaps, and optimized routing.
+
+4. **Payment**:
+   - Paddle integration for subscription management.
+   - Support for users in Bangladesh and globally.
+
+5. **Legal Pages**:
+   - Terms of Service.
+   - Privacy Policy.
+
+---
+
+## Non-Functional Requirements
+1. **Performance**: Ensure fast load times with server-side rendering (SSR) and optimized static assets.
+2. **Scalability**: Design for future growth with MongoDB.
+3. **Accessibility**: WCAG-compliant design for usability.
+4. **Security**: Use HTTPS, secure authentication, and database encryption for sensitive user data.
+5. **Reliability**: Ensure uptime with deployment on scalable platforms (e.g., Vercel).
+
+
+
+## Database schemas
+
+### Users
+
+| Column        | Type      | Description                   |
+| ------------- | --------- | ----------------------------- |
+| id            | UUID      | Primary key.                  |
+| username      | String    | Unique username for the user. |
+| email         | String    | User email (unique).          |
+| password_hash | String    | Hashed password.              |
+| created_at    | Timestamp | Account creation timestamp.   |
+| updated_at    | Timestamp | Last update timestamp.        |
+### Profiles
+| Column        | Type      | Description                                                          |
+| ------------- | --------- | -------------------------------------------------------------------- |
+| id            | UUID      | Primary key.                                                         |
+| user_id       | UUID      | Foreign key to Users table.                                          |
+| profile_image | String    | URL to the user’s profile image.                                     |
+| bio           | String    | Short user bio (length-limited).                                     |
+| created_at    | TIMESTAMP | Time of creation                                                     |
+| updated_at    | TIMESTAMP | Time of update                                                       |
+| username      | String    | Unique username for the user                                         |
+| page_visits   | Integer   | total page visits from other people/don't count users own page views |
+### Journals
+| Column     | Type      | Description                         |
+| ---------- | --------- | ----------------------------------- |
+| id         | UUID      | Primary key.                        |
+| user_id    | UUID      | Foreign key to Users table.         |
+| date       | Date      | Date of the journal entry.          |
+| content    | Text      | Markdown-formatted journal content. |
+| is_private | Boolean   | Whether the entry is private.       |
+| word_count | Integer   | Number of words in the entry.       |
+| created_at | TIMESTAMP | Default: current time.              |
+| updated_at | TIMESTAMP | Default: current time.              |
+### Themes
+| Column     | Type    | Description                        |
+| ---------- | ------- | ---------------------------------- |
+| id         | UUID    | Primary key.                       |
+| name       | String  | Theme name.                        |
+| is_premium | Boolean | Whether the theme is premium only. |
+### Settings
+| Column        | Data Type    | Constraints            |
+| ------------- | ------------ | ---------------------- |
+| id            | UUID         | Primary Key            |
+| user_id       | UUID         | Foreign Key: Users(id) |
+| setting_name  | VARCHAR(100) |                        |
+| setting_value | TEXT         |                        |
+| created_at    | TIMESTAMP    | Default: Current Time  |
+| updated_at    | TIMESTAMP    | Default: Current Time  |
+### Subscriptions
+| Column     | Type    | Description                         |
+| ---------- | ------- | ----------------------------------- |
+| id         | UUID    | Primary key.                        |
+| user_id    | UUID    | Foreign key to Users table.         |
+| plan       | String  | Subscription plan 'free', 'premium' |
+| start_date | Date    | Subscription start date.            |
+| end_date   | Date    | Subscription end date.              |
+| on_trial   | BOOLEAN | Default: true                       |
+### Analytics
+| Column            | Type          | Description                                                                |
+| ----------------- | ------------- | -------------------------------------------------------------------------- |
+| id                | UUID          | Primary key.                                                               |
+| user_id           | UUID          | Foreign key to Users table.                                                |
+| total_words       | Integer       | Total words written by the user.                                           |
+| highest_streak    | Integer       | User's highest journaling streak.                                          |
+| current_streak    | Integer       | User's current journaling streak.                                          |
+| consistent_months | array of json | example: [{month: 'january', year: 2025}, {'month': 'august', year: 2024}] |
+### Heatmaps
+| Column       | Type    | Description                 |
+| ------------ | ------- | --------------------------- |
+| id           | UUID    | Primary key.                |
+| user_id      | UUID    | Foreign key to Users table. |
+| year         | Integer | year                        |
+| heatmap data | json    | data of the heatmap         |
+| appearance   | json    | appearance data             |
+| updated_at   | Date    | date                        |
+
+
+Your task is to:
+1. Generate, test, and refine code until all requirements are met.
+2. Debug and resolve all issues autonomously, keeping the code clean, modular, and well-documented.
+3. Validate the functionality through automated or manual tests and fix any failing cases.
+4. Follow the **latest official documentation** for the tech stack provided. Documentation references will be provided to you and must be strictly adhered to.
+
+## Guidelines
+1. **Preserve Working Code**: 
+   - Do **not modify existing code** that is already functional, unless explicitly required by the new features or changes.
+   - Ensure changes are isolated to the specific parts of the code relevant to the new functionality or fix.
+2. **Error Handling**:
+   - Automatically detect, analyze, and fix any runtime or logical errors during execution or testing.
+   - Avoid introducing new errors while implementing changes or adding features.
+3. **Iteration**:
+   - Continuously improve the codebase in an iterative manner until all specified requirements are fully satisfied and no issues remain.
+   - Perform regression testing to ensure existing functionalities remain unaffected by new additions.
+4. **Documentation**:
+   - Ensure the code is fully documented with clear inline comments.
+   - Provide an external README file summarizing the project's purpose, setup instructions, and usage.
+   - Reference the latest official documentation in code comments when implementing complex features.
+5. **Testing**:
+   - Include comprehensive unit and integration tests to ensure robustness.
+   - Use industry-standard testing libraries where applicable.
+6. **Optimization**:
+   - Optimize the code for performance and scalability when necessary.
+
+## Workflow
+1. Begin by analyzing the requirements and generating the initial codebase or feature implementation.
+2. After generating each segment, self-execute and validate it to ensure compliance with the requirements.
+3. If errors, bugs, or missing features are detected:
+   - Diagnose the issue.
+   - Refactor or generate new code to resolve the issue.
+   - Rerun tests and repeat until the issue is resolved.
+4. Continuously verify the entire codebase after every major change to prevent regressions.
+5. Before making any changes, validate whether the current implementation aligns with the new requirements. If it does, **do not modify it unnecessarily.**
+
+## Key Rules
+- Follow the **latest official documentation** for the tech stack provided. Use only the references provided for this purpose.
+- Do not modify or restructure existing, functional code unless required by new functionality or bug fixes.
+- Do not introduce new issues in the process of implementing features or fixes.
+- Continue refining and testing the code until:
+  1. All specified requirements are 100% fulfilled.
+  2. All errors and warnings are eliminated.
+  3. All tests pass successfully.
+  4. Existing functionality is unaffected and preserved.
+- **Do not stop the process unless explicitly instructed or all conditions are met.**
+
+## Deliverables
+1. A fully functional codebase that meets all requirements without altering working features unnecessarily.
+2. A clear and concise README file, including references to the latest documentation followed.
+3. Complete test cases for validation.
+4. Modular, maintainable, and well-optimized code.
+
+**Note**: Use self-feedback and improvement strategies to ensure an efficient and error-free implementation. Perform regression tests after every significant change to maintain the integrity of the codebase.

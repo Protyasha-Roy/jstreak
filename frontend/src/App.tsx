@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Input } from './components/ui/input'
 import { Button } from './components/ui/button'
@@ -17,6 +17,35 @@ export default function App() {
   const [step, setStep] = useState<StepType>('username')
   const [rightContent, setRightContent] = useState<FooterLinkType>('about')
   const [authMode, setAuthMode] = useState<AuthMode>('signup')
+  const [isNavSticky, setIsNavSticky] = useState(false)
+  const [navOriginalTop, setNavOriginalTop] = useState<number | null>(null)
+
+  useEffect(() => {
+    const navElement = document.getElementById('right-nav');
+    if (navElement) {
+      const rect = navElement.getBoundingClientRect();
+      setNavOriginalTop(rect.top + window.scrollY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const navElement = document.getElementById('right-nav');
+      if (!navElement || navOriginalTop === null) return;
+
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY >= navOriginalTop) {
+        setIsNavSticky(true);
+      } else {
+        setIsNavSticky(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [navOriginalTop]);
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -104,8 +133,8 @@ export default function App() {
               >
                 <Logo size={40} />
                 <h1 className="mt-4 text-4xl font-bold">jstreak</h1>
-                <p className="text-lg text-muted-foreground mt-2">
-                  Your daily journal, beautifully visualized
+                <p className="text-sm sm:text-base text-muted-foreground mt-2">
+                  Track your writing journey
                 </p>
               </motion.div>
 
@@ -346,9 +375,9 @@ export default function App() {
         </div>
 
         {/* Right side content */}
-        <div className="w-full lg:w-[65%] border-t lg:border-t-0 lg:border-l flex flex-col mt-5">
-          <div className="px-8 py-4 border-b">
-            <nav className="flex gap-8">
+        <div className="w-full lg:w-[70%] border-t lg:border-t-0 lg:border-l flex flex-col mt-5">
+          <div id="right-nav" className={`px-4 sm:px-8 py-4 border-b bg-background transition-all duration-300 ${isNavSticky ? 'fixed top-0 left-0 right-0 z-10' : ''}`}>
+            <nav className="flex gap-3 sm:gap-8 max-w-[900px] mx-auto lg:max-w-none lg:mx-0">
               {[
                 ['about', 'About'],
                 ['pricing', 'Pricing'],
@@ -374,7 +403,7 @@ export default function App() {
               ))}
             </nav>
           </div>
-          <div className="flex-1 overflow-auto hide-scrollbar relative">
+          <div className={`lg:flex-1 lg:overflow-auto hide-scrollbar relative ${isNavSticky ? 'mt-[4.5rem]' : ''}`}>
             <div className="min-h-full w-full px-8 py-6">
               <div className="max-w-[900px] mx-auto">
                 <AnimatePresence mode="wait">
@@ -388,17 +417,20 @@ export default function App() {
 
       <footer className="py-4 border-t mt-auto">
         <div className="w-full px-2 sm:px-4 lg:container mx-auto text-center">
-          <p className="text-sm text-muted-foreground">
-            Developed by{' '}
-            <a
-              href="https://github.com/protyasha201"
-              className="hover:text-foreground transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Protyasha Roy
-            </a>{' '}
-            &copy; 2025 JStreak. All rights reserved.
+          <p className="text-xs sm:text-sm text-muted-foreground flex flex-col lg:flex-row justify-center items-center gap-1 lg:gap-2">
+            <span>
+              Developed by{' '}
+              <a
+                href="https://protyasharoy.onrender.com"
+                className="hover:text-foreground transition-colors text-primary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Protyasha Roy
+              </a>
+            </span>
+            <span className="hidden lg:inline-block">&middot;</span>
+            <span>&copy; 2025 JStreak. All rights reserved.</span>
           </p>
         </div>
       </footer>
