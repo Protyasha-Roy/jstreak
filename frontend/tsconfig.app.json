@@ -9,7 +9,6 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
-    "noEmit": true,
     "jsx": "react-jsx"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],

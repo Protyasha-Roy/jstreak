@@ -11,12 +11,13 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "outDir": "./dist", // Specify where emitted files go
+    "emitDeclarationOnly": true // Optional: Emit only declaration files
   },
   "include": ["vite.config.ts"]
 }
