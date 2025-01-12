@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ThemeToggle } from '../components/theme-toggle'
-import { Logo } from '../components/logo'
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
-import { Loader2, Calendar, Edit3, Eye, Settings, LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Separator } from '../components/ui/separator'
 import { Badge } from '../components/ui/badge'
+import { Heatmap } from '../components/heatmap'
+import { Loader2, Calendar, Eye } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip'
+import { ThemeToggle } from '../components/theme-toggle'
 
 interface User {
   id: string
@@ -29,9 +28,26 @@ interface User {
   }
 }
 
+interface UserData {
+  username: string
+  avatarUrl?: string
+  bio?: string
+  stats: {
+    currentStreak: number
+    highestStreak: number
+    totalWords: number
+    totalEntries: number
+    viewCount: number
+  }
+  heatmapData: Array<{
+    date: Date
+    count: number
+    wordCount: number
+  }>
+}
+
 export default function UserProfile() {
   const { username } = useParams()
-  const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +55,7 @@ export default function UserProfile() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
-      navigate('/')
+      window.location.href = '/'
       return
     }
 
@@ -59,37 +75,20 @@ export default function UserProfile() {
         setUser(data.user)
 
         if (data.user.username !== username) {
-          navigate(`/${data.user.username}`)
+          window.location.href = `/${data.user.username}`
         }
       } catch (error) {
         console.error('Profile fetch error:', error)
         setError('Failed to load user data')
         localStorage.removeItem('token')
-        navigate('/')
+        window.location.href = '/'
       } finally {
         setLoading(false)
       }
     }
 
     fetchUser()
-  }, [username, navigate])
-
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      await fetch('http://localhost:5000/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      localStorage.removeItem('token')
-      navigate('/')
-    }
-  }
+  }, [username])
 
   if (loading) {
     return (
@@ -104,140 +103,121 @@ export default function UserProfile() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <p className="text-red-500">{error || 'User not found'}</p>
-          <Button onClick={() => navigate('/')}>Go Home</Button>
+          <Button onClick={() => window.location.href = '/'}>Go Home</Button>
         </div>
       </div>
     )
   }
 
+  const userData: UserData = {
+    username: user.username,
+    avatarUrl: user.profile?.profile_image,
+    bio: user.profile?.bio,
+    stats: {
+      currentStreak: user.stats?.current_streak || 0,
+      highestStreak: user.stats?.highest_streak || 0,
+      totalWords: user.stats?.total_words || 0,
+      totalEntries: user.stats?.total_entries || 0,
+      viewCount: user.profile?.page_visits || 0,
+    },
+    heatmapData: [
+      { date: new Date(), count: 1, wordCount: 250 },
+      { date: new Date(Date.now() - 86400000), count: 1, wordCount: 300 },
+      { date: new Date(Date.now() - 86400000 * 2), count: 2, wordCount: 500 },
+    ]
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Logo />
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className="container mx-auto p-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Left Column - User Info */}
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center space-y-4">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={userData.avatarUrl} />
+                  <AvatarFallback>{userData.username[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="space-y-1 text-center">
+                  <h2 className="text-2xl font-bold">{userData.username}</h2>
+                  <p className="text-muted-foreground">{userData.bio}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Stats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Current Streak</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="default">{userData.stats.currentStreak}</Badge>
+                    <span className="text-sm">days</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Highest Streak</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="default">{userData.stats.highestStreak}</Badge>
+                    <span className="text-sm">days</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total Words</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary">{userData.stats.totalWords}</Badge>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total Entries</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary">{userData.stats.totalEntries}</Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{userData.stats.viewCount} views</span>
+                </div>
+                <ThemeToggle />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Left Column - Profile Info */}
-          <div className="md:col-span-1 space-y-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center space-y-4">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={user.profile?.profile_image} />
-                    <AvatarFallback>{user.username[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="text-center">
-                    <h1 className="text-2xl font-bold">@{user.username}</h1>
-                    <p className="text-muted-foreground">{user.profile?.bio || 'No bio yet'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Current Streak</span>
-                  <Badge variant="secondary">{user.stats?.current_streak || 0} days</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Highest Streak</span>
-                  <Badge variant="secondary">{user.stats?.highest_streak || 0} days</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Total Words</span>
-                  <Badge variant="secondary">{user.stats?.total_words || 0}</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Total Entries</span>
-                  <Badge variant="secondary">{user.stats?.total_entries || 0}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Page Views</span>
-                    <div className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                      <span>{user.profile?.page_visits || 0}</span>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Theme</span>
-                    <ThemeToggle />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Heatmap and Entries */}
-          <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Writing Activity</CardTitle>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <Calendar className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>View Calendar</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </CardHeader>
-              <CardContent>
-                {/* TODO: Add heatmap component here */}
-                <div className="h-48 bg-muted rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Activity Heatmap Coming Soon</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Recent Entries</CardTitle>
-                <Button>
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  New Entry
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* TODO: Add journal entries list here */}
-                  <p className="text-center text-muted-foreground py-8">
-                    No journal entries yet. Start writing to build your streak!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Right Column - Activity */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-2">
+              <CardTitle className="text-base">Writing Activity</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>View Calendar</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Heatmap data={userData.heatmapData} />
+            </CardContent>
+          </Card>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
