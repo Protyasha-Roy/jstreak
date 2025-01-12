@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { PenLine, Calendar, Palette, FileText, Lock, BarChart } from 'lucide-react'
+import { PenLine, Calendar, Palette, FileText, Lock, BarChart, Check } from 'lucide-react'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { useState } from 'react'
