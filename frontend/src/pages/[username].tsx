@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import { Badge } from '../components/ui/badge'
@@ -48,6 +48,7 @@ interface UserData {
 
 export default function UserProfile() {
   const { username } = useParams()
+  const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -125,6 +126,13 @@ export default function UserProfile() {
       { date: new Date(Date.now() - 86400000), count: 1, wordCount: 300 },
       { date: new Date(Date.now() - 86400000 * 2), count: 2, wordCount: 500 },
     ]
+  }
+
+  const handleDateClick = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    navigate(`/${username}/${year}/${month}/${day}`)
   }
 
   return (
@@ -213,7 +221,7 @@ export default function UserProfile() {
               </TooltipProvider>
             </CardHeader>
             <CardContent className="pt-0">
-              <Heatmap data={userData.heatmapData} />
+              <Heatmap data={userData.heatmapData} onDateClick={handleDateClick} />
             </CardContent>
           </Card>
         </div>

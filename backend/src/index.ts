@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth';
+import journalRoutes from './routes/journals';
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/jstreak')
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/journals', journalRoutes);
 
 // Error handling middleware
 interface ErrorWithStack extends Error {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Input } from './components/ui/input'
 import { Button } from './components/ui/button'
-import { ThemeToggle } from './components/theme-toggle'
-import { Logo } from './components/logo'
-import { ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
+import { Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Logo } from './components/logo'
+import { ThemeToggle } from './components/theme-toggle'
 import { RightContent } from './components/right-content'
 import { cn } from './lib/utils'
 import { checkUsername, checkEmail, register, verifyOTP, login } from './services/api'
@@ -18,7 +18,7 @@ type StepType = 'username' | 'email' | 'password' | 'otp'
 type FooterLinkType = 'about' | 'pricing' | 'terms' | 'privacy' | 'contact'
 type AuthMode = 'login' | 'signup'
 
-export default function App() {
+function App() {
   const [step, setStep] = useState<StepType>('username')
   const [rightContent, setRightContent] = useState<FooterLinkType>('about')
   const [authMode, setAuthMode] = useState<AuthMode>('signup')
@@ -506,3 +506,5 @@ export default function App() {
     </div>
   )
 }
+
+export default App

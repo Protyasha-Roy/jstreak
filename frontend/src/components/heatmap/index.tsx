@@ -12,6 +12,7 @@ interface HeatmapProps {
     wordCount?: number
   }>
   colorScheme?: Record<string, string>
+  onDateClick?: (date: Date) => void
 }
 
 const defaultColorScheme: Record<string, string> = {
@@ -38,10 +39,9 @@ const intensityClasses: Record<number, string> = {
   5: 'opacity-100',
 }
 
-
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-export function Heatmap({ data, colorScheme = defaultColorScheme }: HeatmapProps) {
+export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }: HeatmapProps) {
   const [selectedYear, setSelectedYear] = useState(getYear(new Date()))
   const [direction, setDirection] = useState<'left' | 'right' | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
@@ -125,9 +125,9 @@ export function Heatmap({ data, colorScheme = defaultColorScheme }: HeatmapProps
                   </div>
                 ))}
                 {getDaysForMonth(selectedYear, month).map((day, index) => {
-                  if (!day) return <div key={`empty-${index}`} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
+                  if (!day) return <div key={`empty-${month}-${index}`} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
                   
-                  const dayData = data.find(d => isSameDay(new Date(d.date), day))
+                  const dayData = data.find(d => isSameDay(d.date, day))
                   const intensity = dayData ? getIntensity(dayData.wordCount || dayData.count) : 0
 
                   return (
@@ -135,9 +135,11 @@ export function Heatmap({ data, colorScheme = defaultColorScheme }: HeatmapProps
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
+                            onClick={() => onDateClick?.(day)}
                             className={cn(
                               'w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-[1px] transition-all cursor-pointer text-[6px] md:text-[7px] flex items-center justify-center',
-                              intensity > 0 ? colorScheme[month.toString()] : intensityClasses[0]
+                              intensity > 0 ? colorScheme[format(day, 'M')] : intensityClasses[0],
+                              intensityClasses[intensity]
                             )}
                           >
                             <span className="flex items-center justify-center w-full h-full">
