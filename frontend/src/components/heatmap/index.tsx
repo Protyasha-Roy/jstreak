@@ -138,7 +138,7 @@ export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }:
                             onClick={() => onDateClick?.(day)}
                             className={cn(
                               'w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-[1px] transition-all cursor-pointer text-[6px] md:text-[7px] flex items-center justify-center',
-                              intensity > 0 ? colorScheme[monthNum.toString()] : 'bg-gray-50 dark:bg-gray-900',
+                              intensity > 0 ? colorScheme[monthNum.toString()] : 'bg-gray-50 dark:bg-black/50',
                               intensity > 0 ? intensityClasses[intensity] : intensityClasses[0]
                             )}
                           >
