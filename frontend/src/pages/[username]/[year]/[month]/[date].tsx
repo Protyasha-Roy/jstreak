@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Eye, EyeOff, Save } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Save, ChevronLeft } from 'lucide-react'
 import ReactMarkdown, { Components } from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
@@ -73,6 +73,7 @@ const markdownComponents: Components = {
 
 export default function JournalEntryPage() {
   const { username, year, month, date } = useParams()
+  const navigate = useNavigate()
   const [entry, setEntry] = useState<JournalEntry | null>(null)
   const [content, setContent] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
@@ -185,6 +186,16 @@ export default function JournalEntryPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mb-4">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(`/${username}`)}
+          className="flex items-center gap-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Profile
+        </Button>
+      </div>
       <Card className="p-6">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-4">

@@ -8,8 +8,7 @@ import { useState } from 'react'
 interface HeatmapProps {
   data: Array<{
     date: Date
-    count: number
-    wordCount?: number
+    wordCount: number
   }>
   colorScheme?: Record<string, string>
   onDateClick?: (date: Date) => void
@@ -31,12 +30,12 @@ const defaultColorScheme: Record<string, string> = {
 }
 
 const intensityClasses: Record<number, string> = {
-  0: 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400',
+  0: 'hover:bg-gray-100 dark:hover:bg-gray-800',
   1: 'opacity-20',
   2: 'opacity-40',
   3: 'opacity-60',
   4: 'opacity-80',
-  5: 'opacity-100',
+  5: 'opacity-100'
 }
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -57,12 +56,12 @@ export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }:
     return [...emptyDays, ...days]
   }
 
-  const getIntensity = (count: number): number => {
-    if (count === 0) return 0
-    if (count <= 100) return 1
-    if (count <= 250) return 2
-    if (count <= 500) return 3
-    if (count <= 1000) return 4
+  const getIntensity = (wordCount: number): number => {
+    if (!wordCount) return 0
+    if (wordCount <= 100) return 1
+    if (wordCount <= 300) return 2
+    if (wordCount <= 600) return 3
+    if (wordCount <= 1000) return 4
     return 5
   }
 
@@ -109,26 +108,27 @@ export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }:
         }}
       >
         <div className="grid grid-cols-2 gap-0.5 md:grid-cols-3 md:gap-1">
-          {months.map(month => (
-            <div key={month} className="space-y-0.5">
+          {months.map(monthNum => (
+            <div key={monthNum} className="space-y-0.5">
               <div className="flex items-center gap-2 pl-0.5">
                 <h4 className="text-[8px] md:text-[9px] font-medium text-foreground">
-                  {format(new Date(selectedYear, month - 1), 'MMM')}
+                  {format(new Date(selectedYear, monthNum - 1), 'MMM')}
                 </h4>
-                <div className={cn('w-1 h-1 md:w-1.5 md:h-1.5 rounded-sm', colorScheme[month.toString()])} />
+                <div className={cn('w-1 h-1 md:w-1.5 md:h-1.5 rounded-sm', colorScheme[monthNum.toString()])} />
               </div>
-              <div className="grid grid-cols-7 gap-x-[1px] gap-y-[2px] md:gap-y-[3px]">
-                {/* Add weekday labels */}
+              <div className="grid grid-cols-7 gap-0.5">
                 {WEEKDAYS.map((day, i) => (
                   <div key={i} className="text-[6px] text-center text-muted-foreground font-medium w-2.5 h-2.5 md:w-3.5 md:h-3.5 flex items-center justify-center">
                     {day}
                   </div>
                 ))}
-                {getDaysForMonth(selectedYear, month).map((day, index) => {
-                  if (!day) return <div key={`empty-${month}-${index}`} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
+                {getDaysForMonth(selectedYear, monthNum).map((day, index) => {
+                  if (!day) return <div key={`empty-${monthNum}-${index}`} className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
                   
-                  const dayData = data.find(d => isSameDay(d.date, day))
-                  const intensity = dayData ? getIntensity(dayData.wordCount || dayData.count) : 0
+                  const entryForDate = data.find(entry => 
+                    isSameDay(new Date(entry.date), day)
+                  )
+                  const intensity = entryForDate ? getIntensity(entryForDate.wordCount) : 0
 
                   return (
                     <TooltipProvider key={day.toISOString()}>
@@ -138,8 +138,8 @@ export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }:
                             onClick={() => onDateClick?.(day)}
                             className={cn(
                               'w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-[1px] transition-all cursor-pointer text-[6px] md:text-[7px] flex items-center justify-center',
-                              intensity > 0 ? colorScheme[format(day, 'M')] : intensityClasses[0],
-                              intensityClasses[intensity]
+                              intensity > 0 ? colorScheme[monthNum.toString()] : 'bg-gray-50 dark:bg-gray-900',
+                              intensity > 0 ? intensityClasses[intensity] : intensityClasses[0]
                             )}
                           >
                             <span className="flex items-center justify-center w-full h-full">
@@ -150,11 +150,9 @@ export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }:
                         <TooltipContent side="top" className="p-2 text-xs">
                           <div className="space-y-1">
                             <p className="font-medium">{format(day, 'MMM d, yyyy')}</p>
-                            {dayData && (
+                            {entryForDate && (
                               <p className="text-muted-foreground">
-                                {dayData.wordCount 
-                                  ? `${dayData.wordCount} words`
-                                  : `${dayData.count} entries`}
+                                {entryForDate.wordCount} words
                               </p>
                             )}
                           </div>

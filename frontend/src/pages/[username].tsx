@@ -28,6 +28,11 @@ interface User {
   }
 }
 
+interface HeatmapEntry {
+  date: string
+  wordCount: number
+}
+
 interface UserData {
   username: string
   avatarUrl?: string
@@ -50,6 +55,7 @@ export default function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
+  const [heatmapData, setHeatmapData] = useState<Array<{ date: Date; count: number; wordCount: number }>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,24 +66,44 @@ export default function UserProfile() {
       return
     }
 
-    const fetchUser = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/auth/me', {
+        // Fetch user data
+        const userResponse = await fetch('http://localhost:5000/api/auth/me', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         })
 
-        if (!response.ok) {
+        if (!userResponse.ok) {
           throw new Error('Failed to fetch user data')
         }
 
-        const data = await response.json()
-        setUser(data.user)
+        const userData = await userResponse.json()
+        setUser(userData.user)
 
-        if (data.user.username !== username) {
-          window.location.href = `/${data.user.username}`
+        if (userData.user.username !== username) {
+          window.location.href = `/${userData.user.username}`
+          return
         }
+
+        // Fetch heatmap data
+        const heatmapResponse = await fetch(`http://localhost:5000/api/journals/${username}/heatmap`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!heatmapResponse.ok) {
+          throw new Error('Failed to fetch heatmap data')
+        }
+
+        const heatmapData = await heatmapResponse.json() as HeatmapEntry[]
+        setHeatmapData(heatmapData.map((entry) => ({
+          date: new Date(entry.date),
+          wordCount: entry.wordCount,
+          count: 1
+        })))
       } catch (error) {
         console.error('Profile fetch error:', error)
         setError('Failed to load user data')
@@ -88,7 +114,7 @@ export default function UserProfile() {
       }
     }
 
-    fetchUser()
+    fetchData()
   }, [username])
 
   if (loading) {
@@ -121,11 +147,7 @@ export default function UserProfile() {
       totalEntries: user.stats?.total_entries || 0,
       viewCount: user.profile?.page_visits || 0,
     },
-    heatmapData: [
-      { date: new Date(), count: 1, wordCount: 250 },
-      { date: new Date(Date.now() - 86400000), count: 1, wordCount: 300 },
-      { date: new Date(Date.now() - 86400000 * 2), count: 2, wordCount: 500 },
-    ]
+    heatmapData: heatmapData
   }
 
   const handleDateClick = (date: Date) => {

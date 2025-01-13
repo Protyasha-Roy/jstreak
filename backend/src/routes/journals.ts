@@ -213,4 +213,37 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
   }
 })
 
+// Get all journal entries for heatmap
+router.get('/:username/heatmap', authenticate, async (req, res) => {
+  try {
+    const { username } = req.params
+    const { year } = req.query
+
+    // If year is provided, get entries for that year, otherwise get all entries
+    const query: any = { username }
+    if (year) {
+      const startOfYear = new Date(parseInt(year as string), 0, 1)
+      const endOfYear = new Date(parseInt(year as string), 11, 31, 23, 59, 59, 999)
+      query.date = {
+        $gte: startOfYear,
+        $lte: endOfYear
+      }
+    }
+
+    const entries = await JournalEntry.find(query)
+      .select('date word_count -_id')
+      .sort({ date: 1 })
+
+    const heatmapData = entries.map(entry => ({
+      date: entry.date,
+      wordCount: entry.word_count
+    }))
+
+    res.json(heatmapData)
+  } catch (error) {
+    console.error('Error fetching heatmap data:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
 export default router
