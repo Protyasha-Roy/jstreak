@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
-export interface IUser extends mongoose.Document {
+export interface IUser {
   _id: string;
   username: string;
   email: string;
@@ -11,6 +11,8 @@ export interface IUser extends mongoose.Document {
   total_entries: number;
   created_at: Date;
   updated_at: Date;
+  bio: string;
+  avatar_url: string;
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
@@ -34,6 +36,8 @@ const UserSchema = new mongoose.Schema<IUser>({
   email_verified: { type: Boolean, default: false },
   total_words: { type: Number, default: 0 },
   total_entries: { type: Number, default: 0 },
+  bio: { type: String, default: '' },
+  avatar_url: { type: String, default: '' },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 }, {

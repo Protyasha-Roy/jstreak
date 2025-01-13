@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button } from '../components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
-import { Heatmap } from '../components/heatmap'
-import {  Calendar, LogOut, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip'
-import { ThemeToggle } from '../components/theme-toggle'
-import { Separator } from '../components/ui/separator'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Heatmap } from '@/components/heatmap'
+import { Calendar, LogOut, Loader2, Settings } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { Separator } from '@/components/ui/separator'
+import { AlertCircle } from 'lucide-react'
 
 interface User {
   id: string
@@ -33,24 +34,6 @@ interface HeatmapEntry {
   wordCount: number
 }
 
-interface UserData {
-  username: string
-  avatarUrl?: string
-  bio?: string
-  stats: {
-    currentStreak: number
-    highestStreak: number
-    totalWords: number
-    totalEntries: number
-    viewCount: number
-  }
-  heatmapData: Array<{
-    date: Date
-    count: number
-    wordCount: number
-  }>
-}
-
 export default function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
@@ -58,6 +41,13 @@ export default function UserProfile() {
   const [heatmapData, setHeatmapData] = useState<Array<{ date: Date; count: number; wordCount: number }>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastFetch, setLastFetch] = useState<number>(0)
+  const FETCH_COOLDOWN = 5000 // 5 seconds cooldown
+
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    return `http://localhost:5000${path}`;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -67,39 +57,88 @@ export default function UserProfile() {
     }
 
     const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      
       try {
+        // Check if we're within cooldown period
+        const now = Date.now()
+        if (now - lastFetch < FETCH_COOLDOWN) {
+          setLoading(false)
+          return
+        }
+        setLastFetch(now)
+
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+
         // Fetch user data
-        const userResponse = await fetch('http://localhost:5000/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const userResponse = await fetch(`http://localhost:5000/api/users/profile/${username}`, {
+          headers
         })
 
         if (!userResponse.ok) {
+          if (userResponse.status === 429) {
+            // Handle rate limit
+            console.log('Rate limited, waiting before retry...')
+            setTimeout(() => {
+              setLastFetch(0) // Reset lastFetch to allow retry
+            }, FETCH_COOLDOWN)
+            return
+          }
           throw new Error('Failed to fetch user data')
         }
 
         const userData = await userResponse.json()
-        setUser(userData.user)
-
-        if (userData.user.username !== username) {
-          window.location.href = `/${userData.user.username}`
-          return
-        }
-
-        // Fetch heatmap data
-        const heatmapResponse = await fetch(`http://localhost:5000/api/journals/${username}/heatmap`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        setUser({
+          id: userData.id,
+          username: userData.username,
+          email: userData.email,
+          email_verified: userData.email_verified,
+          profile: {
+            bio: userData.bio || '',
+            profile_image: userData.profileImage,
+            page_visits: userData.pageVisits || 0
+          },
+          stats: {
+            current_streak: userData.stats?.currentStreak || 0,
+            highest_streak: userData.stats?.highestStreak || 0,
+            total_words: Math.max(0, userData.stats?.totalWords || 0),
+            most_consistent_month: userData.stats?.mostConsistentMonth || '',
+            total_entries: userData.stats?.totalEntries || 0
           }
         })
 
+        // Get current year for heatmap
+        const currentYear = new Date().getFullYear()
+
+        // Fetch heatmap data
+        const heatmapResponse = await fetch(`http://localhost:5000/api/journals/${username}/heatmap?year=${currentYear}`, {
+          headers
+        })
+
         if (!heatmapResponse.ok) {
+          if (heatmapResponse.status === 429) {
+            // Handle rate limit
+            console.log('Rate limited, waiting before retry...')
+            setTimeout(() => {
+              setLastFetch(0) // Reset lastFetch to allow retry
+            }, FETCH_COOLDOWN)
+            return
+          }
+          if (heatmapResponse.status === 401) {
+            // Token expired or invalid, redirect to login
+            localStorage.removeItem('token')
+            window.location.href = '/'
+            return
+          }
           throw new Error('Failed to fetch heatmap data')
         }
 
-        const heatmapData = await heatmapResponse.json() as HeatmapEntry[]
-        setHeatmapData(heatmapData.map((entry) => ({
+        const heatmapData = await heatmapResponse.json()
+        setHeatmapData(heatmapData.map((entry: HeatmapEntry) => ({
           date: new Date(entry.date),
           wordCount: entry.wordCount,
           count: 1
@@ -107,42 +146,31 @@ export default function UserProfile() {
       } catch (error) {
         console.error('Profile fetch error:', error)
         setError('Failed to load user data')
-        localStorage.removeItem('token')
-        window.location.href = '/'
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [username])
+  }, [username, lastFetch])
 
-  if (loading) {
+  // Show loading first or when user is null (initial state)
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
   }
 
-  if (error || !user) {
+  // Then show error if any
+  if (error) {
     return (
-      <div>{error || 'User not found'}</div>
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <p className="text-lg text-muted-foreground">{error}</p>
+      </div>
     )
-  }
-
-  const userData: UserData = {
-    username: user.username,
-    avatarUrl: user.profile?.profile_image,
-    bio: user.profile?.bio,
-    stats: {
-      currentStreak: user.stats?.current_streak || 0,
-      highestStreak: user.stats?.highest_streak || 0,
-      totalWords: user.stats?.total_words || 0,
-      totalEntries: user.stats?.total_entries || 0,
-      viewCount: user.profile?.page_visits || 0,
-    },
-    heatmapData: heatmapData
   }
 
   const handleDateClick = (date: Date) => {
@@ -159,66 +187,85 @@ export default function UserProfile() {
 
   return (
     <div className="container max-w-5xl mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-8 justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-8">
+        {/* Left side content */}
         <div className="space-y-6">
           {/* Profile Section */}
-          <div className="space-y-4">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={user?.profile?.profile_image} />
-                <AvatarFallback>{username?.[0]?.toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold">{username}</h2>
-                <p className="text-sm text-muted-foreground">{user?.profile?.bio || "No bio yet"}</p>
+          <Card className="border-none shadow-none">
+            <CardHeader className="p-0">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <Avatar className="h-24 w-24">
+                  {user.profile?.profile_image ? (
+                    <AvatarImage 
+                      src={getImageUrl(user.profile.profile_image)}
+                      alt={user.username}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                      {user.username[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-bold">{user.username}</h1>
+                  <p className="text-sm text-muted-foreground">{user.profile?.bio || "No bio yet"}</p>
+                </div>
               </div>
-            </div>
+            </CardHeader>
 
-            <Separator className="my-4" />
-
-            {/* Stats Section */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Current Streak</span>
-                <span className="font-medium">{user?.stats?.current_streak || 0} days</span>
+            <CardContent className="p-0 mt-6">
+              <Separator className="mb-6" />
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total Words</span>
+                  <span className="font-medium">{user.stats?.total_words?.toLocaleString() || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total Entries</span>
+                  <span className="font-medium">{user.stats?.total_entries || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Current Streak</span>
+                  <span className="font-medium">{user.stats?.current_streak || 0} days</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Highest Streak</span>
+                  <span className="font-medium">{user.stats?.highest_streak || 0} days</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Page Views</span>
+                  <span className="font-medium">{user.profile?.page_visits || 0}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Highest Streak</span>
-                <span className="font-medium">{user?.stats?.highest_streak || 0} days</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total Words</span>
-                <span className="font-medium">{user?.stats?.total_words?.toLocaleString() || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total Entries</span>
-                <span className="font-medium">{user?.stats?.total_entries || 0}</span>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <Separator className="my-4" />
+          <Separator />
 
-            {/* Page Views */}
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Page Views</span>
-              <span className="font-medium">{user?.profile?.page_visits || 0}</span>
-            </div>
-
-            <Separator className="my-4" />
-
-            {/* Theme and Logout */}
-            <div className="flex items-center justify-between pt-2">
-              <ThemeToggle />
-              <Button 
-                variant="ghost" 
+          {/* Theme and Logout */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={handleLogout}
+                onClick={() => navigate('/settings')}
                 className="text-muted-foreground hover:text-foreground"
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                <Settings className="h-4 w-4" />
               </Button>
+              <ThemeToggle />
             </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
 
@@ -239,7 +286,7 @@ export default function UserProfile() {
               </TooltipProvider>
             </CardHeader>
             <CardContent className="pt-0">
-              <Heatmap data={userData.heatmapData} onDateClick={handleDateClick} />
+              <Heatmap data={heatmapData} onDateClick={handleDateClick} />
             </CardContent>
           </Card>
         </div>

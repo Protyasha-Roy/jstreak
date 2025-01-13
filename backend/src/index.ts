@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import journalRoutes from './routes/journals';
+import userRoutes from './routes/users';
+import path from 'path'
+
 
 // Load environment variables
 dotenv.config();
@@ -13,9 +16,17 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 app.use(helmet());
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res, path) => {
+    res.set('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}))
 
 // Rate limiting
 const limiter = rateLimit({
@@ -23,6 +34,9 @@ const limiter = rateLimit({
   max: 100 // limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/jstreak')
@@ -37,6 +51,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/jstreak')
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/journals', journalRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 interface ErrorWithStack extends Error {
