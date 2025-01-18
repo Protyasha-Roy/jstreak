@@ -11,9 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { Slider } from '../components/ui/slider'
-import { Badge } from '../components/ui/badge'
 import { Progress } from '../components/ui/progress'
-import { User, Palette, CreditCard, Upload, Check, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { User, Palette, CreditCard, Upload, AlertTriangle, ArrowLeft } from 'lucide-react'
 
 const fontOptions = [
   { value: 'inter', label: 'Inter' },
@@ -70,7 +69,7 @@ export default function Settings() {
   })
 
   // Subscription state
-  const [subscriptionData, setSubscriptionData] = useState({
+  const [subscriptionData] = useState({
     plan: 'free',
     entriesLeft: 5,
     trialEndsIn: 7,
