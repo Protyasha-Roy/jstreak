@@ -106,6 +106,11 @@ router.post('/:username/:year/:month/:date', authenticate, async (req, res) => {
       return res.status(400).json({ message: 'Journal entry already exists for this date' })
     }
 
+    // Don't create entry if content is empty
+    if (!content.trim()) {
+      return res.status(400).json({ message: 'Cannot create empty journal entry' })
+    }
+
     const journalEntry = new JournalEntry({
       username,
       content,
@@ -116,18 +121,27 @@ router.post('/:username/:year/:month/:date', authenticate, async (req, res) => {
 
     const savedEntry = await journalEntry.save()
 
+    // Get total number of non-empty entries
+    const totalEntries = await JournalEntry.countDocuments({
+      username,
+      content: { $regex: /\S+/ } // Matches entries with at least one non-whitespace character
+    })
+
     // Update user statistics
-    await User.updateOne(
+    const updatedUser = await User.findOneAndUpdate(
       { username },
       {
-        $inc: {
-          total_words: word_count,
-          total_entries: 1
-        }
-      }
+        $inc: { total_words: word_count },
+        $set: { total_entries: totalEntries }
+      },
+      { new: true }
     )
 
-    res.status(201).json(savedEntry)
+    res.status(201).json({
+      ...savedEntry.toObject(),
+      total_entries: totalEntries,
+      total_words: updatedUser?.total_words || 0
+    })
   } catch (error) {
     console.error('Error creating journal entry:', error)
     res.status(500).json({ message: 'Internal server error' })
@@ -175,6 +189,40 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
 
     const wordDiff = word_count - existingEntry.word_count
 
+    // If content is empty, delete the entry
+    if (!content.trim()) {
+      await JournalEntry.deleteOne({
+        username,
+        date: {
+          $gte: startOfDay,
+          $lt: endOfDay
+        }
+      })
+
+      // Get total number of non-empty entries
+      const totalEntries = await JournalEntry.countDocuments({
+        username,
+        content: { $regex: /\S+/ } // Matches entries with at least one non-whitespace character
+      })
+
+      // Update user's statistics
+      await User.findOneAndUpdate(
+        { username },
+        { 
+          $inc: { total_words: -existingEntry.word_count },
+          $set: { total_entries: totalEntries }
+        },
+        { new: true }
+      )
+
+      return res.json({ 
+        message: 'Entry deleted due to empty content',
+        total_entries: totalEntries,
+        total_words: (await User.findOne({ username }))?.total_words || 0
+      })
+    }
+
+    // Update the entry if content is not empty
     const updatedEntry = await JournalEntry.findOneAndUpdate(
       {
         username,
@@ -198,15 +246,27 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Journal entry not found' })
     }
 
-    // Update user's total word count
-    if (wordDiff !== 0) {
-      await User.updateOne(
-        { username },
-        { $inc: { total_words: wordDiff } }
-      )
-    }
+    // Get total number of non-empty entries after update
+    const totalEntries = await JournalEntry.countDocuments({
+      username,
+      content: { $regex: /\S+/ }
+    })
 
-    res.json(updatedEntry)
+    // Update user's statistics
+    const updatedUser = await User.findOneAndUpdate(
+      { username },
+      { 
+        $inc: { total_words: wordDiff },
+        $set: { total_entries: totalEntries }
+      },
+      { new: true }
+    )
+
+    res.json({
+      ...updatedEntry.toObject(),
+      total_entries: totalEntries,
+      total_words: updatedUser?.total_words || 0
+    })
   } catch (error) {
     console.error('Error updating journal entry:', error)
     res.status(500).json({ message: 'Internal server error' })
