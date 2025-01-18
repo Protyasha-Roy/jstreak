@@ -4,9 +4,28 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
 import { Session } from '../models/Session';
 import { authenticate } from '../middleware/auth';
-import { sendEmail, getWelcomeEmailTemplate, getPasswordResetEmailTemplate, getVerificationEmailTemplate } from '../services/email';
+import { sendEmail, getVerificationEmailTemplate, getPasswordResetEmailTemplate } from '../services/email';
 
 const router = express.Router();
+
+// In-memory storage for pending registrations
+const pendingRegistrations = new Map<string, {
+  username: string;
+  email: string;
+  password_hash: string;
+  verificationCode: string;
+  expiresAt: Date;
+}>();
+
+// Cleanup expired pending registrations every 10 minutes
+setInterval(() => {
+  const now = new Date();
+  for (const [token, registration] of pendingRegistrations.entries()) {
+    if (registration.expiresAt < now) {
+      pendingRegistrations.delete(token);
+    }
+  }
+}, 10 * 60 * 1000);
 
 // Check username availability
 router.get('/check-username', async (req, res) => {
@@ -64,30 +83,24 @@ router.post('/register', async (req, res) => {
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = await User.create({
+    // Generate verification code
+    const verificationCode = Math.random().toString().slice(2, 8);
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minutes expiry
+
+    // Generate a temporary token for this registration
+    const token = uuidv4();
+
+    // Store registration data temporarily
+    pendingRegistrations.set(token, {
       username: username.toLowerCase(),
       email: email.toLowerCase(),
       password_hash,
-      email_verified: false
+      verificationCode,
+      expiresAt
     });
 
-    // Generate verification code
-    const verificationCode = Math.random().toString().slice(2, 8);
-    const expires_at = new Date();
-    expires_at.setMinutes(expires_at.getMinutes() + 10); // 10 minutes expiry
-
-    // Create session
-    const session = await Session.create({
-      user_id: user._id,
-      token: uuidv4(),
-      verification_code: verificationCode,
-      expires_at,
-      user_agent: req.headers['user-agent'],
-      ip_address: req.ip
-    });
-
-    // Send welcome email with verification code
+    // Send verification email
     const { subject, html } = getVerificationEmailTemplate(username, verificationCode);
     await sendEmail({
       to: email,
@@ -97,11 +110,10 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({
       user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
+        username: username.toLowerCase(),
+        email: email.toLowerCase()
       },
-      token: session.token
+      token
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -110,51 +122,116 @@ router.post('/register', async (req, res) => {
 });
 
 // Verify OTP
-router.post('/verify-otp', authenticate, async (req, res) => {
+router.post('/verify-otp', async (req, res) => {
   try {
     const { otp } = req.body;
-    const session = await Session.findOne({
-      user_id: req.user._id,
-      verification_code: otp,
-      expires_at: { $gt: new Date() }
-    });
+    const token = req.headers.authorization?.split(' ')[1];
 
-    if (!session) {
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
     }
 
-    // Mark email as verified
-    await User.updateOne(
-      { _id: req.user._id },
-      { email_verified: true }
-    );
+    // Get pending registration
+    const registration = pendingRegistrations.get(token);
+    
+    if (!registration) {
+      return res.status(400).json({ message: 'Invalid or expired registration' });
+    }
 
-    // Send welcome email
-    const { subject, html } = getWelcomeEmailTemplate(req.user.username);
-    await sendEmail({
-      to: req.user.email,
-      subject,
-      html
+    if (registration.verificationCode !== otp) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    if (registration.expiresAt < new Date()) {
+      pendingRegistrations.delete(token);
+      return res.status(400).json({ message: 'Verification code expired' });
+    }
+
+    // Create user
+    const user = await User.create({
+      username: registration.username,
+      email: registration.email,
+      password_hash: registration.password_hash,
+      email_verified: true // Email is verified since OTP matched
     });
 
-    // Create new session for authenticated user
-    const newSession = await Session.create({
-      user_id: req.user._id,
-      token: uuidv4(),
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    // Create session token
+    const sessionToken = uuidv4();
+    const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    // Create session
+    await Session.create({
+      user_id: user._id,
+      token: sessionToken,
+      expires_at,
       user_agent: req.headers['user-agent'],
       ip_address: req.ip
     });
 
-    // Delete verification session
-    await Session.deleteOne({ _id: session._id });
+    // Clear pending registration
+    pendingRegistrations.delete(token);
 
     res.json({
       success: true,
-      token: newSession.token
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      },
+      token: sessionToken
     });
   } catch (error) {
     console.error('OTP verification error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Find user by username or email
+    const user = await User.findOne({
+      $or: [
+        { username: username.toLowerCase() },
+        { email: username.toLowerCase() }
+      ]
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Create session token
+    const token = uuidv4();
+    const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    // Create session
+    await Session.create({
+      user_id: user._id,
+      token,
+      expires_at,
+      user_agent: req.headers['user-agent'],
+      ip_address: req.ip
+    });
+
+    res.json({
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -254,52 +331,6 @@ router.post('/send-verification', authenticate, async (req, res) => {
     res.json({ message: 'Verification code sent' });
   } catch (error) {
     console.error('Verification error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Login
-router.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    // Find user by username or email
-    const user = await User.findOne({
-      $or: [
-        { username: username.toLowerCase() },
-        { email: username.toLowerCase() }
-      ]
-    });
-
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Create session
-    const session = await Session.create({
-      user_id: user._id,
-      token: uuidv4(),
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      user_agent: req.headers['user-agent'],
-      ip_address: req.ip
-    });
-
-    res.json({
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      },
-      token: session.token
-    });
-  } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

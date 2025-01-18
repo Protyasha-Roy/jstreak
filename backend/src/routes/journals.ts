@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { authenticate } from '../middleware/auth'
 import mongoose from 'mongoose'
 import { User } from '../models/User'
+import { Journal } from '../models/Journal'
+import { calculateStreaks, updateStreaks } from '../utils/streakCalculator'
 
 const router = express.Router()
 
@@ -137,10 +139,15 @@ router.post('/:username/:year/:month/:date', authenticate, async (req, res) => {
       { new: true }
     )
 
+    // Update streaks
+    const streaks = await updateStreaks(username)
+
     res.status(201).json({
       ...savedEntry.toObject(),
       total_entries: totalEntries,
-      total_words: updatedUser?.total_words || 0
+      total_words: updatedUser?.total_words || 0,
+      current_streak: streaks.currentStreak,
+      highest_streak: streaks.highestStreak
     })
   } catch (error) {
     console.error('Error creating journal entry:', error)
@@ -215,10 +222,15 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
         { new: true }
       )
 
+      // Update streaks
+      const streaks = await updateStreaks(username)
+
       return res.json({ 
         message: 'Entry deleted due to empty content',
         total_entries: totalEntries,
-        total_words: (await User.findOne({ username }))?.total_words || 0
+        total_words: (await User.findOne({ username }))?.total_words || 0,
+        current_streak: streaks.currentStreak,
+        highest_streak: streaks.highestStreak
       })
     }
 
@@ -262,10 +274,15 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
       { new: true }
     )
 
+    // Update streaks
+    const streaks = await updateStreaks(username)
+
     res.json({
       ...updatedEntry.toObject(),
       total_entries: totalEntries,
-      total_words: updatedUser?.total_words || 0
+      total_words: updatedUser?.total_words || 0,
+      current_streak: streaks.currentStreak,
+      highest_streak: streaks.highestStreak
     })
   } catch (error) {
     console.error('Error updating journal entry:', error)

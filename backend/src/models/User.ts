@@ -9,6 +9,8 @@ export interface IUser {
   email_verified: boolean;
   total_words: number;
   total_entries: number;
+  current_streak: number;
+  highest_streak: number;
   created_at: Date;
   updated_at: Date;
   bio: string;
@@ -36,6 +38,8 @@ const UserSchema = new mongoose.Schema<IUser>({
   email_verified: { type: Boolean, default: false },
   total_words: { type: Number, default: 0 },
   total_entries: { type: Number, default: 0 },
+  current_streak: { type: Number, default: 0 },
+  highest_streak: { type: Number, default: 0 },
   bio: { type: String, default: '' },
   avatar_url: { type: String, default: '' },
   created_at: { type: Date, default: Date.now },

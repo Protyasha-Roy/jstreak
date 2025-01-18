@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import { authenticate } from '../middleware/auth'
 import { User, IUser } from '../models/User'
+import { calculateStreaks } from '../utils/streakCalculator'
 
 const router = express.Router()
 
@@ -67,19 +68,37 @@ router.get('/profile', authenticate, async (req: any, res) => {
 // Get user profile by username
 router.get('/profile/:username', async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.params.username })
+    const { username } = req.params
+    const user = await User.findOne({ username })
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }
 
+    // Calculate streaks before returning profile
+    const streaks = await calculateStreaks(username)
+    
+    // Update user with latest streak information
+    await User.updateOne(
+      { username },
+      { 
+        $set: { 
+          current_streak: streaks.currentStreak,
+          highest_streak: streaks.highestStreak
+        }
+      }
+    )
+
     res.json({
+      id: user._id,
       username: user.username,
       bio: user.bio,
       profileImage: user.avatar_url,
       stats: {
         totalWords: user.total_words,
-        totalEntries: user.total_entries
+        totalEntries: user.total_entries,
+        currentStreak: streaks.currentStreak,
+        highestStreak: streaks.highestStreak
       }
     })
   } catch (error) {

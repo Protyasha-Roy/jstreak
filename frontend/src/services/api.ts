@@ -46,7 +46,7 @@ export const register = async (data: {
   return response.json();
 };
 
-export const verifyOTP = async (otp: string, token: string): Promise<{ success: boolean }> => {
+export const verifyOTP = async (otp: string, token: string): Promise<AuthResponse> => {
   const response = await fetch(`${API_URL}/auth/verify-otp`, {
     method: 'POST',
     headers: {

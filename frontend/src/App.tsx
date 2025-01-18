@@ -92,14 +92,9 @@ function App() {
           setSessionToken(response.token)
           setStep('otp')
         } else if (step === 'otp') {
-          const { success } = await verifyOTP(formData.otp, sessionToken)
-          if (success) {
-            // Store token and redirect
-            localStorage.setItem('token', sessionToken)
-            window.location.href = `/${formData.username}`
-          } else {
-            setError('Invalid verification code')
-          }
+          const response = await verifyOTP(formData.otp, sessionToken)
+          localStorage.setItem('token', response.token)
+          window.location.href = `/${formData.username}`
         }
       } else {
         // Handle login
