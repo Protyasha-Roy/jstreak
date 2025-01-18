@@ -263,8 +263,7 @@ export default function UserProfile() {
               onClick={handleLogout}
               className="text-muted-foreground hover:text-foreground"
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
