@@ -9,6 +9,13 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface UserStats {
+  total_words: number;
+  total_entries: number;
+  current_streak: number;
+  highest_streak: number;
+}
+
 export const checkUsername = async (username: string): Promise<{ exists: boolean }> => {
   const response = await fetch(`${API_URL}/auth/check-username?username=${username}`);
   if (!response.ok) {
@@ -79,6 +86,22 @@ export const login = async (data: {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to login');
+  }
+  
+  return response.json();
+};
+
+export const getUserStats = async (username: string): Promise<UserStats> => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/journals/${username}/stats`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get user stats');
   }
   
   return response.json();

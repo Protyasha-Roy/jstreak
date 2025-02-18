@@ -323,4 +323,43 @@ router.get('/:username/heatmap', authenticate, async (req, res) => {
   }
 })
 
+// Get user stats including streaks
+router.get('/:username/stats', authenticate, async (req, res) => {
+  try {
+    const { username } = req.params
+    
+    // Get user stats
+    const user = await User.findOne({ username }).select('total_words total_entries current_streak highest_streak')
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    // Calculate latest streaks
+    const streaks = await calculateStreaks(username)
+    
+    // Update user if streaks have changed
+    if (user.current_streak !== streaks.currentStreak || user.highest_streak !== streaks.highestStreak) {
+      await User.updateOne(
+        { username },
+        { 
+          $set: { 
+            current_streak: streaks.currentStreak,
+            highest_streak: streaks.highestStreak
+          }
+        }
+      )
+    }
+
+    res.json({
+      total_words: user.total_words,
+      total_entries: user.total_entries,
+      current_streak: streaks.currentStreak,
+      highest_streak: streaks.highestStreak
+    })
+  } catch (error) {
+    console.error('Error getting user stats:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 export default router
