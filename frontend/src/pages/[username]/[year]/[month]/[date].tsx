@@ -1,15 +1,23 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Loader2, Eye, EyeOff, Save, ChevronLeft } from 'lucide-react'
 import { Toggle } from '@/components/ui/toggle'
-import { EditorState, Plugin } from 'prosemirror-state'
-import { EditorView, Decoration, DecorationSet } from 'prosemirror-view'
-import { Schema, NodeSpec, Node as ProsemirrorNode, DOMOutputSpec } from 'prosemirror-model'
-import { schema } from 'prosemirror-schema-basic'
-import { addListNodes } from 'prosemirror-schema-list'
-import { exampleSetup } from 'prosemirror-example-setup'
-import { defaultMarkdownParser, defaultMarkdownSerializer } from 'prosemirror-markdown'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Placeholder from '@tiptap/extension-placeholder'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
+import Youtube from '@tiptap/extension-youtube'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
+const lowlight = createLowlight(common)
 
 interface JournalEntry {
   content: string
@@ -18,45 +26,6 @@ interface JournalEntry {
   created_at: string
   updated_at: string
 }
-
-// Create a schema with list nodes and task lists
-const baseNodes = schema.spec.nodes
-const listNodes = addListNodes(baseNodes, 'paragraph block*', 'block')
-
-// Define custom nodes
-const customNodes: {[key: string]: NodeSpec} = {
-  taskList: {
-    group: 'block',
-    content: 'taskItem+',
-    toDOM(): DOMOutputSpec { 
-      return ['ul', { 'data-type': 'taskList' }, 0] 
-    },
-    parseDOM: [{ tag: 'ul[data-type="taskList"]' }]
-  },
-  taskItem: {
-    content: 'paragraph block*',
-    defining: true,
-    attrs: { done: { default: false } },
-    toDOM(node: ProsemirrorNode): DOMOutputSpec {
-      return ['li', { 'data-type': 'taskItem', 'data-done': node.attrs.done.toString() },
-        ['span', { contenteditable: 'false' },
-          ['input', { type: 'checkbox', checked: node.attrs.done }]],
-        ['div', { class: 'task-content' }, 0]]
-    },
-    parseDOM: [{
-      tag: 'li[data-type="taskItem"]',
-      getAttrs(dom: string | HTMLElement) {
-        return { done: (dom as HTMLElement).getAttribute('data-done') === 'true' }
-      }
-    }]
-  }
-}
-
-// Create the schema by combining base nodes with custom nodes
-const mySchema = new Schema({
-  nodes: listNodes.append(customNodes),
-  marks: schema.spec.marks
-})
 
 export default function JournalEntryPage() {
   const { username, year, month, date } = useParams()
@@ -67,61 +36,118 @@ export default function JournalEntryPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [content, setContent] = useState('')
-  const editorRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<EditorView | null>(null)
 
-  const initializeEditor = (initialContent = '') => {
-    if (!editorRef.current || viewRef.current) return
-
-    const doc = initialContent ? defaultMarkdownParser.parse(initialContent) : undefined
-    const state = EditorState.create({
-      schema: mySchema,
-      doc,
-      plugins: [
-        ...exampleSetup({ schema: mySchema }),
-        new Plugin({
-          props: {
-            decorations(state) {
-              const doc = state.doc
-              if (doc.childCount === 1 && doc.firstChild?.isTextblock && doc.firstChild.content.size === 0) {
-                return DecorationSet.create(doc, [
-                  Decoration.node(0, doc.nodeSize - 2, {
-                    class: 'is-empty',
-                    'data-placeholder': 'Write your journal entry here...'
-                  })
-                ])
-              }
-              return DecorationSet.empty
-            }
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        bulletList: {
+          HTMLAttributes: {
+            class: 'list-disc list-outside leading-3 -mt-2'
           }
-        })
-      ]
-    })
-
-    const view = new EditorView(editorRef.current, {
-      state,
-      dispatchTransaction(transaction) {
-        const newState = view.state.apply(transaction)
-        view.updateState(newState)
-        const markdown = defaultMarkdownSerializer.serialize(newState.doc)
-        setContent(markdown)
-      },
-      handleClick: (view, pos, event) => {
-        const node = view.state.doc.nodeAt(pos)
-        if (node?.type.name === 'taskItem') {
-          const target = event.target as HTMLElement
-          if (target.nodeName === 'INPUT' && target.getAttribute('type') === 'checkbox') {
-            const tr = view.state.tr.setNodeAttribute(pos, 'done', !node.attrs.done)
-            view.dispatch(tr)
-            return true
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'list-decimal list-outside leading-3 -mt-2'
+          }
+        },
+        code: {
+          HTMLAttributes: {
+            class: 'rounded-md bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm'
+          }
+        },
+        heading: {
+          levels: [1, 2, 3, 4, 5, 6]
+        },
+        paragraph: {
+          HTMLAttributes: {
+            class: 'mb-4'
+          }
+        },
+        blockquote: {
+          HTMLAttributes: {
+            class: 'border-l-4 border-primary pl-4 italic'
           }
         }
-        return false
-      }
-    })
+      }),
+      TaskList.configure({
+        // Removed `not-prose` so Tailwind's prose styles are applied.
+        HTMLAttributes: {
+          class: 'pl-2'
+        }
+      }),
+      TaskItem.configure({
+        HTMLAttributes: {
+          class: 'flex items-start my-4'
+        },
+        nested: true
+      }),
+      Placeholder.configure({
+        placeholder: 'Write your journal entry here...'
+      }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full border border-border my-4'
+        }
+      }),
+      TableRow.configure({
+        HTMLAttributes: {
+          class: 'border-b border-border'
+        }
+      }),
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'border-b border-border bg-muted font-medium p-4 text-left'
+        }
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'p-4 border-r border-border last:border-r-0'
+        }
+      }),
+      Link.configure({
+        HTMLAttributes: {
+          class: 'text-primary', // Blue color for link text.
+          rel: 'noopener noreferrer'
+        },
+        autolink: true,
+        linkOnPaste: true,
+        // Setting openOnClick to true makes the link clickable.
+        openOnClick: true,
+        protocols: ['http', 'https', 'mailto', 'tel']
+      }),
+      Image.configure({
+        HTMLAttributes: {
+          class: 'rounded-lg border max-w-full'
+        }
+      }),
+      Youtube.configure({
+        width: 640,
+        height: 360,
+        HTMLAttributes: {
+          class: 'rounded-lg overflow-hidden aspect-video w-full'
+        }
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+        HTMLAttributes: {
+          class: 'rounded-lg bg-muted p-4'
+        }
+      })
+    ],
+    content: '',
+    onUpdate: ({ editor }) => {
+      // Store both HTML and text content
+      setContent(editor.getHTML())
+    }
+  })
 
-    viewRef.current = view
-  }
+  useEffect(() => {
+    if (editor && entry) {
+      // Set the content as HTML in the editor.
+      editor.commands.setContent(entry.content, false)
+    }
+  }, [editor, entry])
 
   useEffect(() => {
     const fetchEntry = async () => {
@@ -141,7 +167,6 @@ export default function JournalEntryPage() {
         if (!response.ok) {
           if (response.status === 404) {
             setEntry(null)
-            initializeEditor()
           } else {
             throw new Error('Failed to fetch journal entry')
           }
@@ -150,7 +175,6 @@ export default function JournalEntryPage() {
           setEntry(data)
           setContent(data.content)
           setIsPrivate(data.is_private)
-          initializeEditor(data.content)
         }
       } catch (err) {
         setError('Failed to fetch journal entry')
@@ -161,13 +185,6 @@ export default function JournalEntryPage() {
     }
 
     fetchEntry()
-
-    return () => {
-      if (viewRef.current) {
-        viewRef.current.destroy()
-        viewRef.current = null
-      }
-    }
   }, [username, year, month, date])
 
   const saveEntry = async () => {
@@ -238,8 +255,8 @@ export default function JournalEntryPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 border-b">
-        <div className="container mx-auto px-4 py-2 flex justify-between items-center">
+      <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+        <div className="container mx-auto px-4 py-2 flex justify-between items-center w-full md:w-4/5 lg:w-3/4 xl:w-2/3">
           <Button 
             variant="ghost" 
             onClick={() => navigate(`/${username}`)}
@@ -297,11 +314,12 @@ export default function JournalEntryPage() {
       )}
 
       <div className="container mx-auto px-4 py-4">
-        <div 
-          ref={editorRef}
-          className="prose dark:prose-invert max-w-none min-h-[calc(100vh-6rem)] ProseMirror-focused"
-          data-placeholder="Write your journal entry here..."
-        />
+        <div className="mx-auto w-full md:w-4/5 lg:w-3/4 xl:w-2/3">
+          <EditorContent
+            editor={editor}
+            className="prose prose-zinc dark:prose-invert max-w-none min-h-[calc(100vh-6rem)] [&_img]:mx-auto [&_img]:max-w-full [&_img]:md:max-w-[80%] [&_img]:lg:max-w-[70%] [&_.youtube-video]:mx-auto [&_.youtube-video]:w-full [&_.youtube-video]:md:w-[80%] [&_.youtube-video]:lg:w-[70%] [&_.youtube-video]:relative [&_.youtube-video]:overflow-hidden"
+          />
+        </div>
       </div>
     </div>
   )
