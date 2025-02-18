@@ -196,7 +196,11 @@ export default function JournalEntryPage() {
         return
       }
 
-      const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+      // Remove HTML tags and decode entities before counting words
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = content.trim()
+      const textContent = tempDiv.textContent || tempDiv.innerText || ''
+      const wordCount = textContent.split(/\s+/).filter(Boolean).length
 
       const method = entry ? 'PUT' : 'POST'
       const response = await fetch(`http://localhost:5000/api/journals/${username}/${year}/${month}/${date}`, {
@@ -251,7 +255,11 @@ export default function JournalEntryPage() {
     )
   }
 
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+  // Remove HTML tags and decode entities before counting words
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = content.trim()
+  const textContent = tempDiv.textContent || tempDiv.innerText || ''
+  const wordCount = textContent.split(/\s+/).filter(Boolean).length
 
   return (
     <div className="min-h-screen flex flex-col">
