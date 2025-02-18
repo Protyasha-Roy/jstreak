@@ -2,11 +2,11 @@
   "name": "jstreak-backend",
   "version": "1.0.0",
   "description": "Backend for JStreak - A daily journaling SaaS",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc && mkdir -p dist/uploads && cp -r uploads dist/ && cp .env* dist/",
+    "build": "tsc -p tsconfig.json && cp .env dist/",
     "test": "jest"
   },
   "dependencies": {
