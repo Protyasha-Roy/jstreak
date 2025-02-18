@@ -31,10 +31,10 @@ const defaultColorScheme: Record<string, string> = {
 
 const intensityClasses: Record<number, string> = {
   0: 'hover:bg-gray-100 dark:hover:bg-gray-800',
-  1: 'opacity-20',
-  2: 'opacity-40',
-  3: 'opacity-60',
-  4: 'opacity-80',
+  1: 'opacity-60',
+  2: 'opacity-70',
+  3: 'opacity-80',
+  4: 'opacity-90',
   5: 'opacity-100'
 }
 
@@ -135,11 +135,18 @@ export function Heatmap({ data, colorScheme = defaultColorScheme, onDateClick }:
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
-                            onClick={() => onDateClick?.(day)}
+                            onClick={() => {
+                              const today = new Date()
+                              today.setHours(0, 0, 0, 0)
+                              if (day <= today) {
+                                onDateClick?.(day)
+                              }
+                            }}
                             className={cn(
-                              'w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-[1px] transition-all cursor-pointer text-[6px] md:text-[7px] flex items-center justify-center',
+                              'w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-[1px] transition-all text-[6px] md:text-[7px] flex items-center justify-center',
                               intensity > 0 ? colorScheme[monthNum.toString()] : 'bg-gray-50 dark:bg-black/50',
-                              intensity > 0 ? intensityClasses[intensity] : intensityClasses[0]
+                              intensity > 0 ? intensityClasses[intensity] : intensityClasses[0],
+                              day.getTime() > new Date().getTime() ? 'opacity-25 cursor-not-allowed' : 'cursor-pointer'
                             )}
                           >
                             <span className="flex items-center justify-center w-full h-full">
