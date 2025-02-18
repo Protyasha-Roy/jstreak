@@ -227,14 +227,6 @@ export default function UserProfile() {
                   <span className="font-medium">{user.stats?.total_entries || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Current Streak</span>
-                  <span className="font-medium">{user.stats?.current_streak || 0} days</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Highest Streak</span>
-                  <span className="font-medium">{user.stats?.highest_streak || 0} days</span>
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Page Views</span>
                   <span className="font-medium">{user.profile?.page_visits || 0}</span>
                 </div>
