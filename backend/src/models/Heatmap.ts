@@ -6,7 +6,6 @@ export interface IHeatmap extends Document {
   user_id: string;
   year: number;
   heatmap_data: Record<string, any>;
-  appearance: Record<string, any>;
   updated_at: Date;
 }
 
@@ -15,7 +14,6 @@ const HeatmapSchema = new Schema<IHeatmap>({
   user_id: { type: String, required: true, ref: 'User' },
   year: { type: Number, required: true },
   heatmap_data: { type: Schema.Types.Mixed, required: true },
-  appearance: { type: Schema.Types.Mixed, required: true },
   updated_at: { type: Date, default: Date.now }
 });
 

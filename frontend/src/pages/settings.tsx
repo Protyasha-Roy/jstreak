@@ -9,29 +9,7 @@ import { Switch } from '../components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
-import { Slider } from '../components/ui/slider'
-import { Progress } from '../components/ui/progress'
-import { User, Palette, CreditCard, Upload, AlertTriangle, ArrowLeft } from 'lucide-react'
-
-const fontOptions = [
-  { value: 'inter', label: 'Inter' },
-  { value: 'manrope', label: 'Manrope' },
-  { value: 'system', label: 'System Default' },
-]
-
-const themeOptions = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
-]
-
-const colorOptions = [
-  { value: 'blue', label: 'Ocean Blue' },
-  { value: 'green', label: 'Forest Green' },
-  { value: 'purple', label: 'Royal Purple' },
-  { value: 'red', label: 'Ruby Red' },
-]
+import { User, CreditCard, Upload, ArrowLeft } from 'lucide-react'
 
 const getImageUrl = (path: string) => {
   if (!path) return '';
@@ -58,14 +36,6 @@ export default function Settings() {
       totalWords: 0,
       totalEntries: 0
     }
-  })
-
-  // Appearance settings state
-  const [appearanceData, setAppearanceData] = useState({
-    font: 'inter',
-    theme: 'system',
-    primaryColor: 'blue',
-    fontSize: 16
   })
 
   // Subscription state
@@ -181,33 +151,6 @@ export default function Settings() {
     }
   }
 
-  const handleAppearanceUpdate = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      setSuccessMessage(null)
-      
-      // Save appearance settings to localStorage for now
-      // We can implement backend storage later if needed
-      localStorage.setItem('appearanceSettings', JSON.stringify(appearanceData))
-      
-      setSuccessMessage('Appearance settings updated successfully')
-    } catch (error) {
-      console.error('Error updating appearance:', error)
-      setError(error instanceof Error ? error.message : 'Failed to update appearance settings')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Load saved appearance settings
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('appearanceSettings')
-    if (savedSettings) {
-      setAppearanceData(JSON.parse(savedSettings))
-    }
-  }, [])
-
   const tabVariants = {
     hidden: { opacity: 0, x: -20 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
@@ -251,14 +194,10 @@ export default function Settings() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
+        <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profile
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Appearance
           </TabsTrigger>
           <TabsTrigger value="subscription" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
@@ -387,110 +326,6 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="appearance" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Appearance Settings</CardTitle>
-                  <CardDescription>
-                    Customize how JStreak looks and feels
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Font Family</Label>
-                      <Select
-                        value={appearanceData.font}
-                        onValueChange={(value) => setAppearanceData(prev => ({ ...prev, font: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fontOptions.map((font) => (
-                            <SelectItem key={font.value} value={font.value}>
-                              {font.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Theme</Label>
-                      <Select
-                        value={appearanceData.theme}
-                        onValueChange={(value) => setAppearanceData(prev => ({ ...prev, theme: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {themeOptions.map((theme) => (
-                            <SelectItem key={theme.value} value={theme.value}>
-                              {theme.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Primary Color</Label>
-                      <Select
-                        value={appearanceData.primaryColor}
-                        onValueChange={(value) => setAppearanceData(prev => ({ ...prev, primaryColor: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {colorOptions.map((color) => (
-                            <SelectItem key={color.value} value={color.value}>
-                              {color.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Font Size</Label>
-                      <div className="flex items-center gap-4">
-                        <Slider
-                          value={[appearanceData.fontSize]}
-                          onValueChange={([value]) => setAppearanceData(prev => ({ ...prev, fontSize: value }))}
-                          min={12}
-                          max={20}
-                          step={1}
-                          className="flex-1"
-                        />
-                        <span className="text-sm font-medium">{appearanceData.fontSize}px</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button onClick={handleAppearanceUpdate} disabled={loading}>
-                    {loading ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="mr-2"
-                        >
-                          ⭮
-                        </motion.div>
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Appearance'
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-
             <TabsContent value="subscription" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -514,32 +349,6 @@ export default function Settings() {
                         </Button>
                       )}
                     </div>
-
-                    {subscriptionData.plan === 'free' && (
-                      <>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Entries Left</span>
-                            <span className="font-medium">{subscriptionData.entriesLeft}</span>
-                          </div>
-                          <Progress value={(subscriptionData.entriesLeft / 10) * 100} />
-                        </div>
-
-                        {!subscriptionData.isTrialEnded && (
-                          <div className="rounded-lg border p-4">
-                            <div className="flex items-start gap-4">
-                              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                              <div>
-                                <h4 className="font-semibold">Trial Period</h4>
-                                <p className="text-sm text-muted-foreground">
-                                  Your trial ends in {subscriptionData.trialEndsIn} days. Upgrade to continue using premium features.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
                   </div>
                 </CardContent>
               </Card>
