@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import { authenticate } from '../middleware/auth'
 import { User, IUser } from '../models/User'
+import { Subscription } from '../models/Subscription'
 import { calculateStreaks } from '../utils/streakCalculator'
 
 const router = express.Router()
@@ -193,6 +194,47 @@ router.post('/profile/image', authenticate, upload.single('image'), async (req: 
     })
   } catch (error) {
     console.error('Error uploading profile image:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
+// Get user subscription status
+router.get('/subscription', authenticate, async (req: any, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    const subscription = await Subscription.findOne({ user_id: user._id })
+    if (!subscription) {
+      // Create a free subscription for new users
+      const newSubscription = await Subscription.create({
+        user_id: user._id,
+        plan: 'free',
+        start_date: new Date(),
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        on_trial: true
+      })
+      return res.json({
+        plan: newSubscription.plan,
+        entriesLeft: 7 - (user.total_entries % 7),
+        totalEntries: user.total_entries,
+        isTrialEnded: false
+      })
+    }
+
+    // Calculate entries left for free plan (7 entries per month)
+    const entriesLeft = subscription.plan === 'free' ? 7 - (user.total_entries % 7) : null
+
+    res.json({
+      plan: subscription.plan,
+      entriesLeft: entriesLeft,
+      totalEntries: user.total_entries,
+      isTrialEnded: !subscription.on_trial
+    })
+  } catch (error) {
+    console.error('Error fetching subscription data:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 })

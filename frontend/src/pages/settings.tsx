@@ -39,12 +39,42 @@ export default function Settings() {
   })
 
   // Subscription state
-  const [subscriptionData] = useState({
-    plan: 'free',
-    entriesLeft: 5,
-    trialEndsIn: 7,
+  const [subscriptionData, setSubscriptionData] = useState({
+    plan: '',
+    entriesLeft: 0,
+    totalEntries: 0,
     isTrialEnded: false
   })
+
+  // Fetch subscription data
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('http://localhost:5000/api/users/subscription', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) throw new Error('Failed to fetch subscription data')
+
+        const data = await response.json()
+        setSubscriptionData({
+          plan: data.plan,
+          entriesLeft: data.entriesLeft,
+          totalEntries: data.totalEntries,
+          isTrialEnded: data.isTrialEnded
+        })
+      } catch (error) {
+        console.error('Error fetching subscription data:', error)
+      }
+    }
+
+    fetchSubscriptionData()
+  }, [])
 
   // Fetch user data
   useEffect(() => {
@@ -335,19 +365,69 @@ export default function Settings() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-medium">Current Plan</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {subscriptionData.plan === 'free' ? 'Free Plan' : 'Premium Plan'}
-                        </p>
+                  <div className="space-y-6">
+                    {/* Current Plan Status */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <h3 className="font-medium">Current Plan</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {subscriptionData.plan === 'free' ? 'Free Plan' : 'Premium Plan'}
+                          </p>
+                        </div>
+                        {subscriptionData.plan === 'free' && (
+                          <Button variant="default">
+                            Upgrade to Premium
+                          </Button>
+                        )}
                       </div>
+
                       {subscriptionData.plan === 'free' && (
-                        <Button variant="default">
-                          Upgrade to Premium
-                        </Button>
+                        <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm">Entries Left This Month</span>
+                            <span className="font-medium">{subscriptionData.entriesLeft} / 7</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-primary rounded-full h-2 transition-all" 
+                              style={{ width: `${(subscriptionData.entriesLeft / 7) * 100}%` }}
+                            />
+                          </div>
+                        </div>
                       )}
+                    </div>
+
+                    {/* Plan Comparison */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Free Plan Features */}
+                      <div className="p-4 border rounded-lg space-y-3">
+                        <h4 className="font-medium">Free Plan</h4>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          <li>• 7 journal entries per month</li>
+                          <li>• Basic light/dark themes</li>
+                          <li>• Activity heatmap</li>
+                          <li>• Basic word count stats</li>
+                        </ul>
+                      </div>
+
+                      {/* Premium Plan Features */}
+                      <div className="p-4 border-2 border-primary rounded-lg space-y-3">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium">Premium Plan</h4>
+                          <div className="text-right">
+                            <span className="font-bold">$7</span>
+                            <span className="text-sm text-muted-foreground">/month</span>
+                          </div>
+                        </div>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          <li>• Everything on the free plan</li>
+                          <li>• Unlimited journal entries</li>
+                          <li>• No watermarks on shared pages</li>
+                          <li>• Advanced analytics</li>
+                          <li>• Priority support</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
