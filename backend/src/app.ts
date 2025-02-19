@@ -32,11 +32,12 @@ app.use(helmet({
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', 'http://localhost:5173');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  setHeaders: (_res, _path) => {
+    _res.set('Access-Control-Allow-Origin', 'http://localhost:5173');
+    _res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }))
+
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -44,8 +45,8 @@ app.use('/api/journals', journalRoutes)
 app.use('/api/users', userRoutes)
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack)
+app.use((_err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(_err.stack)
   res.status(500).json({ error: 'Something broke!' })
 })
 
