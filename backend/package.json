@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "rimraf dist && tsc -p tsconfig.json && copyfiles .env package.json dist/",
+    "build": "rimraf dist && tsc && copyfiles -u 1 src/**/*.* dist/ && copyfiles package.json .env dist/",
     "test": "jest"
   },
   "dependencies": {
