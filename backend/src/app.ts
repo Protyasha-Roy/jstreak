@@ -11,8 +11,11 @@ const app = express()
 
 // Configure CORS
 app.use(cors({
-  origin: ['https://jstreak.vercel.app', 'http://localhost:5174'], // Production and development frontend URLs
-  credentials: false // Set to false since we don't need credentials
+  origin: ['https://jstreak.vercel.app', 'http://localhost:5174', 'https://jstreak.onrender.com'], // Production, development, and backend URLs
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Enable credentials for auth requests
+  optionsSuccessStatus: 204
 }))
 
 // Other middleware
@@ -37,7 +40,6 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
     _res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }))
-
 
 // Routes
 app.use('/api/auth', authRoutes)

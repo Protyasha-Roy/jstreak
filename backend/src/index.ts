@@ -1,32 +1,15 @@
 import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
-import cors from 'cors';
-import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import journalRoutes from './routes/journals';
 import userRoutes from './routes/users';
-import path from 'path'
-
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(helmet());
-
-// Serve static files from the uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res) => {
-    res.set('Access-Control-Allow-Origin', 'https://jstreak.vercel.app');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-}));
 
 // Rate limiting
 const limiter = rateLimit({
