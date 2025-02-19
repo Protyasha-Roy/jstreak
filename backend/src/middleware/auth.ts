@@ -18,7 +18,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ message: 'Authentication required' });
+      res.status(401).json({ message: 'Authentication required' });
+      return;
     }
 
     // Find valid session
@@ -28,14 +29,16 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     });
 
     if (!session) {
-      return res.status(401).json({ message: 'Session expired or invalid' });
+      res.status(401).json({ message: 'Session expired or invalid' });
+      return;
     }
 
     // Find user
     const user = await User.findOne({ _id: session.user_id });
     
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      res.status(401).json({ message: 'User not found' });
+      return;
     }
 
     // Attach user and session to request

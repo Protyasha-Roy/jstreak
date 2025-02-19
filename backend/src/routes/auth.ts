@@ -8,14 +8,28 @@ import { sendEmail, getVerificationEmailTemplate, getPasswordResetEmailTemplate 
 
 const router = express.Router();
 
+/**
+ * asyncHandler: Wraps an async route handler so that it returns Promise<void>.
+ */
+function asyncHandler(
+  fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<void>
+): express.RequestHandler {
+  return (req, res, next) => {
+    fn(req, res, next).catch(next);
+  };
+}
+
 // In-memory storage for pending registrations
-const pendingRegistrations = new Map<string, {
-  username: string;
-  email: string;
-  password_hash: string;
-  verificationCode: string;
-  expiresAt: Date;
-}>();
+const pendingRegistrations = new Map<
+  string,
+  {
+    username: string;
+    email: string;
+    password_hash: string;
+    verificationCode: string;
+    expiresAt: Date;
+  }
+>();
 
 // Cleanup expired pending registrations every 10 minutes
 setInterval(() => {
@@ -28,40 +42,41 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 // Check username availability
-router.get('/check-username', async (req, res) => {
-  try {
+router.get(
+  '/check-username',
+  asyncHandler(async (req, res) => {
     const { username } = req.query;
     if (!username || typeof username !== 'string') {
-      return res.status(400).json({ message: 'Username is required' });
+      res.status(400).json({ message: 'Username is required' });
+      return;
     }
-    
+
     const user = await User.findOne({ username: username.toLowerCase() });
-    return res.json({ exists: !!user });
-  } catch (error) {
-    console.error('Check username error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    res.json({ exists: !!user });
+    return;
+  })
+);
 
 // Check email availability
-router.get('/check-email', async (req, res) => {
-  try {
+router.get(
+  '/check-email',
+  asyncHandler(async (req, res) => {
     const { email } = req.query;
     if (!email || typeof email !== 'string') {
-      return res.status(400).json({ message: 'Email is required' });
+      res.status(400).json({ message: 'Email is required' });
+      return;
     }
-    
+
     const user = await User.findOne({ email: email.toLowerCase() });
-    return res.json({ exists: !!user });
-  } catch (error) {
-    console.error('Check email error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    res.json({ exists: !!user });
+    return;
+  })
+);
 
 // Register new user
-router.post('/register', async (req, res) => {
-  try {
+router.post(
+  '/register',
+  asyncHandler(async (req, res) => {
     const { username, email, password } = req.body;
 
     // Check if user exists
@@ -73,11 +88,13 @@ router.post('/register', async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: existingUser.username === username.toLowerCase()
-          ? 'Username already taken'
-          : 'Email already registered'
+      res.status(400).json({
+        message:
+          existingUser.username === username.toLowerCase()
+            ? 'Username already taken'
+            : 'Email already registered'
       });
+      return;
     }
 
     // Hash password
@@ -115,36 +132,38 @@ router.post('/register', async (req, res) => {
       },
       token
     });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    return;
+  })
+);
 
 // Verify OTP
-router.post('/verify-otp', async (req, res) => {
-  try {
+router.post(
+  '/verify-otp',
+  asyncHandler(async (req, res) => {
     const { otp } = req.body;
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-      return res.status(400).json({ message: 'Token is required' });
+      res.status(400).json({ message: 'Token is required' });
+      return;
     }
 
     // Get pending registration
     const registration = pendingRegistrations.get(token);
-    
     if (!registration) {
-      return res.status(400).json({ message: 'Invalid or expired registration' });
+      res.status(400).json({ message: 'Invalid or expired registration' });
+      return;
     }
 
     if (registration.verificationCode !== otp) {
-      return res.status(400).json({ message: 'Invalid verification code' });
+      res.status(400).json({ message: 'Invalid verification code' });
+      return;
     }
 
     if (registration.expiresAt < new Date()) {
       pendingRegistrations.delete(token);
-      return res.status(400).json({ message: 'Verification code expired' });
+      res.status(400).json({ message: 'Verification code expired' });
+      return;
     }
 
     // Create user
@@ -152,7 +171,7 @@ router.post('/verify-otp', async (req, res) => {
       username: registration.username,
       email: registration.email,
       password_hash: registration.password_hash,
-      email_verified: true // Email is verified since OTP matched
+      email_verified: true
     });
 
     // Create session token
@@ -180,15 +199,14 @@ router.post('/verify-otp', async (req, res) => {
       },
       token: sessionToken
     });
-  } catch (error) {
-    console.error('OTP verification error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    return;
+  })
+);
 
 // Login
-router.post('/login', async (req, res) => {
-  try {
+router.post(
+  '/login',
+  asyncHandler(async (req, res) => {
     const { username, password } = req.body;
 
     // Find user by username or email
@@ -200,13 +218,15 @@ router.post('/login', async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
 
     // Create session token
@@ -230,20 +250,19 @@ router.post('/login', async (req, res) => {
       },
       token
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    return;
+  })
+);
 
 // Request password reset
-router.post('/forgot-password', async (req, res) => {
-  try {
+router.post(
+  '/forgot-password',
+  asyncHandler(async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
-
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
 
     // Generate reset token
@@ -269,15 +288,14 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     res.json({ message: 'Password reset email sent' });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    return;
+  })
+);
 
 // Reset password
-router.post('/reset-password', async (req, res) => {
-  try {
+router.post(
+  '/reset-password',
+  asyncHandler(async (req, res) => {
     const { token, password } = req.body;
 
     // Find valid reset session
@@ -285,9 +303,9 @@ router.post('/reset-password', async (req, res) => {
       token,
       expires_at: { $gt: new Date() }
     });
-
     if (!session) {
-      return res.status(400).json({ message: 'Invalid or expired reset token' });
+      res.status(400).json({ message: 'Invalid or expired reset token' });
+      return;
     }
 
     // Update password
@@ -298,15 +316,15 @@ router.post('/reset-password', async (req, res) => {
     await Session.deleteOne({ _id: session._id });
 
     res.json({ message: 'Password reset successful' });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    return;
+  })
+);
 
 // Send verification code
-router.post('/send-verification', authenticate, async (req, res) => {
-  try {
+router.post(
+  '/send-verification',
+  authenticate,
+  asyncHandler(async (req, res) => {
     const verificationCode = Math.random().toString().slice(2, 8);
     const expires_at = new Date();
     expires_at.setMinutes(expires_at.getMinutes() + 10); // 10 minutes expiry
@@ -329,26 +347,24 @@ router.post('/send-verification', authenticate, async (req, res) => {
     });
 
     res.json({ message: 'Verification code sent' });
-  } catch (error) {
-    console.error('Verification error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+  })
+);
 
 // Logout
-router.post('/logout', authenticate, async (req, res) => {
-  try {
+router.post(
+  '/logout',
+  authenticate,
+  asyncHandler(async (req, res) => {
     await Session.deleteOne({ _id: req.session._id });
     res.json({ message: 'Logged out successfully' });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+  })
+);
 
 // Get current user
-router.get('/me', authenticate, async (req, res) => {
-  try {
+router.get(
+  '/me',
+  authenticate,
+  asyncHandler(async (req, res) => {
     res.json({
       user: {
         id: req.user._id,
@@ -356,27 +372,10 @@ router.get('/me', authenticate, async (req, res) => {
         email: req.user.email
       }
     });
-  } catch (error) {
-    console.error('Get current user error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+  })
+);
 
-// Helper function to create a new session
-async function createSession(userId: string, req: express.Request) {
-  const token = uuidv4();
-  const expires_at = new Date();
-  expires_at.setDate(expires_at.getDate() + 30); // 30 days session
+// Helper function to create a new session (if needed)
 
-  const session = await Session.create({
-    user_id: userId,
-    token,
-    expires_at,
-    user_agent: req.headers['user-agent'],
-    ip_address: req.ip
-  });
-
-  return session;
-}
 
 export default router;

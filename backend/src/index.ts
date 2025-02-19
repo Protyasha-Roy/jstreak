@@ -22,11 +22,11 @@ app.use(helmet());
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res, path) => {
+  setHeaders: (res) => {
     res.set('Access-Control-Allow-Origin', 'http://localhost:5173');
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
-}))
+}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -58,7 +58,7 @@ interface ErrorWithStack extends Error {
   stack?: string;
 }
 
-app.use((err: ErrorWithStack, req: Request, res: Response, next: NextFunction) => {
+app.use((err: ErrorWithStack, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });

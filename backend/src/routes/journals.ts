@@ -1,9 +1,8 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import { z } from 'zod'
 import { authenticate } from '../middleware/auth'
 import mongoose from 'mongoose'
 import { User } from '../models/User'
-import { Journal } from '../models/Journal'
 import { calculateStreaks, updateStreaks } from '../utils/streakCalculator'
 
 const router = express.Router()
@@ -33,7 +32,7 @@ JournalEntrySchema.index({ username: 1, date: 1 }, { unique: true })
 const JournalEntry = mongoose.model('JournalEntry', JournalEntrySchema)
 
 // Get journal entry for a specific date
-router.get('/:username/:year/:month/:date', authenticate, async (req, res) => {
+router.get('/:username/:year/:month/:date', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, year, month, date } = req.params
     const targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(date))
@@ -53,12 +52,14 @@ router.get('/:username/:year/:month/:date', authenticate, async (req, res) => {
     })
 
     if (!journal) {
-      return res.status(404).json({ message: 'Journal entry not found' })
+      res.status(404).json({ message: 'Journal entry not found' })
+      return
     }
 
     // Check if the journal is private and if the user is authorized to view it
     if (journal.is_private && journal.username !== req.user.username) {
-      return res.status(403).json({ message: 'Not authorized to view this journal entry' })
+      res.status(403).json({ message: 'Not authorized to view this journal entry' })
+      return
     }
 
     res.json(journal)
@@ -69,21 +70,23 @@ router.get('/:username/:year/:month/:date', authenticate, async (req, res) => {
 })
 
 // Create a new journal entry
-router.post('/:username/:year/:month/:date', authenticate, async (req, res) => {
+router.post('/:username/:year/:month/:date', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, year, month, date } = req.params
     const validation = journalSchema.safeParse(req.body)
     
     if (!validation.success) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         message: 'Invalid journal data', 
         errors: validation.error.format() 
       })
+      return
     }
 
     // Check if user is authorized to create entry for this username
     if (username !== req.user.username) {
-      return res.status(403).json({ message: 'Not authorized to create journal entry for this user' })
+      res.status(403).json({ message: 'Not authorized to create journal entry for this user' })
+      return
     }
 
     const targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(date))
@@ -105,12 +108,14 @@ router.post('/:username/:year/:month/:date', authenticate, async (req, res) => {
     })
 
     if (existingEntry) {
-      return res.status(400).json({ message: 'Journal entry already exists for this date' })
+      res.status(400).json({ message: 'Journal entry already exists for this date' })
+      return
     }
 
     // Don't create entry if content is empty
     if (!content.trim()) {
-      return res.status(400).json({ message: 'Cannot create empty journal entry' })
+      res.status(400).json({ message: 'Cannot create empty journal entry' })
+      return
     }
 
     const journalEntry = new JournalEntry({
@@ -156,21 +161,23 @@ router.post('/:username/:year/:month/:date', authenticate, async (req, res) => {
 })
 
 // Update an existing journal entry
-router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
+router.put('/:username/:year/:month/:date', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, year, month, date } = req.params
     const validation = journalSchema.safeParse(req.body)
     
     if (!validation.success) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         message: 'Invalid journal data', 
         errors: validation.error.format() 
       })
+      return
     }
 
     // Check if user is authorized to update entry for this username
     if (username !== req.user.username) {
-      return res.status(403).json({ message: 'Not authorized to update journal entry for this user' })
+      res.status(403).json({ message: 'Not authorized to update journal entry for this user' })
+      return
     }
 
     const targetDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(date))
@@ -191,7 +198,8 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
     })
 
     if (!existingEntry) {
-      return res.status(404).json({ message: 'Journal entry not found' })
+      res.status(404).json({ message: 'Journal entry not found' })
+      return
     }
 
     const wordDiff = word_count - existingEntry.word_count
@@ -225,13 +233,14 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
       // Update streaks
       const streaks = await updateStreaks(username)
 
-      return res.json({ 
+      res.json({ 
         message: 'Entry deleted due to empty content',
         total_entries: totalEntries,
         total_words: (await User.findOne({ username }))?.total_words || 0,
         current_streak: streaks.currentStreak,
         highest_streak: streaks.highestStreak
       })
+      return
     }
 
     // Update the entry if content is not empty
@@ -255,7 +264,8 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
     )
 
     if (!updatedEntry) {
-      return res.status(404).json({ message: 'Journal entry not found' })
+      res.status(404).json({ message: 'Journal entry not found' })
+      return
     }
 
     // Get total number of non-empty entries after update
@@ -291,7 +301,7 @@ router.put('/:username/:year/:month/:date', authenticate, async (req, res) => {
 })
 
 // Get all journal entries for heatmap
-router.get('/:username/heatmap', authenticate, async (req, res) => {
+router.get('/:username/heatmap', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username } = req.params
     const { year } = req.query
@@ -324,14 +334,15 @@ router.get('/:username/heatmap', authenticate, async (req, res) => {
 })
 
 // Get user stats including streaks
-router.get('/:username/stats', authenticate, async (req, res) => {
+router.get('/:username/stats', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { username } = req.params
     
     // Get user stats
     const user = await User.findOne({ username }).select('total_words total_entries current_streak highest_streak')
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
     // Calculate latest streaks

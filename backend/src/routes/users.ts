@@ -11,7 +11,7 @@ const router = express.Router()
 
 // Configure multer for image upload
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (_req, _file, cb) => {
     const uploadDir = 'uploads/profile'
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
@@ -31,7 +31,7 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true)
@@ -42,14 +42,13 @@ const upload = multer({
 })
 
 // Get user profile
-router.get('/profile', authenticate, async (req: any, res) => {
+router.get('/profile', authenticate, async (req: express.Request, res: express.Response) => {
   try {
-    const user = await User.findById(req.user._id)
-
+    const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
-
     res.json({
       username: user.username,
       email: user.email,
@@ -59,27 +58,23 @@ router.get('/profile', authenticate, async (req: any, res) => {
         totalWords: user.total_words,
         totalEntries: user.total_entries
       }
-    })
+    });
   } catch (error) {
-    console.error('Error fetching user profile:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-})
+});
 
-// Get user profile by username
-router.get('/profile/:username', async (req, res) => {
+router.get('/profile/:username', async (req: express.Request, res: express.Response) => {
   try {
-    const { username } = req.params
-    const user = await User.findOne({ username })
-
+    const { username } = req.params;
+    const user = await User.findOne({ username });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
-
-    // Calculate streaks before returning profile
-    const streaks = await calculateStreaks(username)
+    const streaks = await calculateStreaks(username);
     
-    // Update user with latest streak information
     await User.updateOne(
       { username },
       { 
@@ -88,8 +83,7 @@ router.get('/profile/:username', async (req, res) => {
           highest_streak: streaks.highestStreak
         }
       }
-    )
-
+    );
     res.json({
       id: user._id,
       username: user.username,
@@ -101,15 +95,15 @@ router.get('/profile/:username', async (req, res) => {
         currentStreak: streaks.currentStreak,
         highestStreak: streaks.highestStreak
       }
-    })
+    });
   } catch (error) {
-    console.error('Error fetching user profile:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-})
+});
 
 // Update user profile
-router.patch('/profile', authenticate, async (req: any, res) => {
+router.patch('/profile', authenticate, async (req: express.Request, res: express.Response) => {
   const { username, bio } = req.body
 
   try {
@@ -117,7 +111,8 @@ router.patch('/profile', authenticate, async (req: any, res) => {
     if (username && username !== req.user.username) {
       const existingUser = await User.findOne({ username })
       if (existingUser) {
-        return res.status(400).json({ message: 'Username is already taken' })
+        res.status(400).json({ message: 'Username is already taken' })
+        return
       }
     }
 
@@ -133,7 +128,8 @@ router.patch('/profile', authenticate, async (req: any, res) => {
     )
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
     res.json({
@@ -151,16 +147,16 @@ router.patch('/profile', authenticate, async (req: any, res) => {
     res.status(500).json({ message: 'Internal server error' })
   }
 })
-
 // Upload profile image
-router.post('/profile/image', authenticate, upload.single('image'), async (req: any, res) => {
+router.post('/profile/image', authenticate, upload.single('image'), async (req: express.Request, res: express.Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No image file provided' })
+      res.status(400).json({ message: 'No image file provided' })
+      return
     }
 
     // Get the file path relative to the uploads directory
-    const imageUrl = `/${req.file.path.replace(/\\/g, '/')}`
+    const imageUrl = `/${req.file.path.replace(/\\/g, '/')}`;
 
     // Delete old profile image if it exists
     const currentUser = await User.findById(req.user._id)
@@ -179,7 +175,8 @@ router.post('/profile/image', authenticate, upload.single('image'), async (req: 
     )
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
     res.json({
@@ -199,11 +196,12 @@ router.post('/profile/image', authenticate, upload.single('image'), async (req: 
 })
 
 // Get user subscription status
-router.get('/subscription', authenticate, async (req: any, res) => {
+router.get('/subscription', authenticate, async (req: express.Request, res: express.Response) => {
   try {
     const user = await User.findById(req.user._id)
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
     const subscription = await Subscription.findOne({ user_id: user._id })
@@ -216,12 +214,13 @@ router.get('/subscription', authenticate, async (req: any, res) => {
         end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         on_trial: true
       })
-      return res.json({
+      res.json({
         plan: newSubscription.plan,
         entriesLeft: 7 - (user.total_entries % 7),
         totalEntries: user.total_entries,
         isTrialEnded: false
       })
+      return
     }
 
     // Calculate entries left for free plan (7 entries per month)
