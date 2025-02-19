@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "rimraf dist && tsc && copyfiles -u 1 src/**/*.* dist/ && copyfiles package.json .env dist/",
+    "build": "rimraf dist && tsc && copyfiles -u 1 src/**/*.json dist/",
     "test": "jest"
   },
   "dependencies": {
