@@ -23,7 +23,7 @@ app.use(helmet());
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   setHeaders: (res) => {
-    res.set('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.set('Access-Control-Allow-Origin', 'https://jstreak.vercel.app');
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));
