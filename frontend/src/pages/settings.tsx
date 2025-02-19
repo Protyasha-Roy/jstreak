@@ -13,7 +13,7 @@ import { User, CreditCard, Upload, ArrowLeft } from 'lucide-react'
 
 const getImageUrl = (path: string) => {
   if (!path) return '';
-  return `http://localhost:5000${path}`;
+  return `https://jstreak.onrender.com${path}`;
 };
 
 export default function Settings() {
@@ -53,7 +53,7 @@ export default function Settings() {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('http://localhost:5000/api/users/subscription', {
+        const response = await fetch('https://jstreak.onrender.com/api/users/subscription', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -86,7 +86,7 @@ export default function Settings() {
           return
         }
 
-        const response = await fetch('http://localhost:5000/api/users/profile', {
+        const response = await fetch('https://jstreak.onrender.com/api/users/profile', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -131,7 +131,7 @@ export default function Settings() {
       const token = localStorage.getItem('token')
 
       // Update profile data
-      const profileResponse = await fetch('http://localhost:5000/api/users/profile', {
+      const profileResponse = await fetch('https://jstreak.onrender.com/api/users/profile', {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -153,7 +153,7 @@ export default function Settings() {
         const formData = new FormData()
         formData.append('image', image)
 
-        const imageResponse = await fetch('http://localhost:5000/api/users/profile/image', {
+        const imageResponse = await fetch('https://jstreak.onrender.com/api/users/profile/image', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

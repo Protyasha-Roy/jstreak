@@ -11,7 +11,7 @@ const app = express()
 
 // Configure CORS
 app.use(cors({
-  origin: 'http://localhost:5174', // Your frontend's actual port
+  origin: ['https://jstreak.vercel.app', 'http://localhost:5174'], // Production and development frontend URLs
   credentials: false // Set to false since we don't need credentials
 }))
 
@@ -25,7 +25,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "blob:", "http://localhost:5000"]
+      imgSrc: ["'self'", "data:", "blob:", "https://jstreak.onrender.com"]
     }
   }
 }))
@@ -33,7 +33,7 @@ app.use(helmet({
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   setHeaders: (_res, _path) => {
-    _res.set('Access-Control-Allow-Origin', 'http://localhost:5173');
+    _res.set('Access-Control-Allow-Origin', 'https://jstreak.vercel.app');
     _res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }))

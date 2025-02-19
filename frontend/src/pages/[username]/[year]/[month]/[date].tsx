@@ -158,7 +158,7 @@ export default function JournalEntryPage() {
           return
         }
 
-        const response = await fetch(`http://localhost:5000/api/journals/${username}/${year}/${month}/${date}`, {
+        const response = await fetch(`https://jstreak.onrender.com/api/journals/${username}/${year}/${month}/${date}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -203,7 +203,7 @@ export default function JournalEntryPage() {
       const wordCount = textContent.split(/\s+/).filter(Boolean).length
 
       const method = entry ? 'PUT' : 'POST'
-      const response = await fetch(`http://localhost:5000/api/journals/${username}/${year}/${month}/${date}`, {
+      const response = await fetch(`https://jstreak.onrender.com/api/journals/${username}/${year}/${month}/${date}`, {
         method,
         headers: {
           'Content-Type': 'application/json',

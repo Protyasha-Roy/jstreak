@@ -46,7 +46,7 @@ export default function UserProfile() {
 
   const getImageUrl = (path: string) => {
     if (!path) return '';
-    return `http://localhost:5000${path}`;
+    return `https://jstreak.onrender.com${path}`;
   };
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function UserProfile() {
         }
 
         // Fetch user data
-        const userResponse = await fetch(`http://localhost:5000/api/users/profile/${username}`, {
+        const userResponse = await fetch(`https://jstreak.onrender.com/api/users/profile/${username}`, {
           headers
         })
 
@@ -115,7 +115,7 @@ export default function UserProfile() {
         const currentYear = new Date().getFullYear()
 
         // Fetch heatmap data
-        const heatmapResponse = await fetch(`http://localhost:5000/api/journals/${username}/heatmap?year=${currentYear}`, {
+        const heatmapResponse = await fetch(`https://jstreak.onrender.com/api/journals/${username}/heatmap?year=${currentYear}`, {
           headers
         })
 
