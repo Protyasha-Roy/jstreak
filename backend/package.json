@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Backend for JStreak - A daily journaling SaaS",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=18.x"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
