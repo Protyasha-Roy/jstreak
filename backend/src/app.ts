@@ -13,9 +13,11 @@ const app = express()
 app.use(cors({
   origin: ['https://jstreak.vercel.app', 'http://localhost:5174', 'https://jstreak.onrender.com'], // Production, development, and backend URLs
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Content-Type-Options'],
   credentials: true, // Enable credentials for auth requests
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // Cache preflight requests for 24 hours
 }))
 
 // Other middleware
